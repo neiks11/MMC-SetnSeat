@@ -1,0 +1,808 @@
+{
+  "settings": {
+    "businessName": "MMC Set n Seat Rentals",
+    "tagline": "Chairs • Tables • Tents • Videoke — Reliable Event Rentals in Lemery and Taal, Batangas",
+    "phone": "0956 403 5020",
+    "email": "setnseatrentals@gmail.com",
+    "facebookUrl": "https://www.facebook.com/profile.php?id=61585212946153",
+    "messengerName": "MMC Setnseat Rentals",
+    "serviceArea": "Lemery and Taal, Batangas (plus nearby Batangas towns)",
+    "baseAddress": "Poblacion / Diversion Rd., Lemery, Batangas",
+    "depositPercent": 30,
+    "defaultDeliveryFee": 250,
+    "defaultSetupFee": 300,
+    "setupFeePerSeat": 5,
+    "freeDeliveryMinOrder": 5000,
+    "lateReturnFeePerDayPercent": 50,
+    "gcashNumber": "0956 403 5020",
+    "gcashAccountName": "MMC Set n Seat Rentals",
+    "mayaNumber": "0956 403 5020",
+    "bankDetails": "BDO Savings: 0045-8821-9012 (Account Name: MMC Set n Seat Rentals) | BPI: 3491-0023-84",
+    "deliveryZones": [
+      {
+        "municipality": "Lemery (Proper / Poblacion)",
+        "fee": 150,
+        "etaNote": "15–30 mins from depot"
+      },
+      {
+        "municipality": "Lemery (Outer Barangays)",
+        "fee": 250,
+        "etaNote": "25–45 mins from depot"
+      },
+      {
+        "municipality": "Taal (Heritage Town / Poblacion)",
+        "fee": 200,
+        "etaNote": "20–35 mins from depot"
+      },
+      {
+        "municipality": "Taal (Outer Barangays)",
+        "fee": 300,
+        "etaNote": "30–50 mins from depot"
+      },
+      {
+        "municipality": "Agoncillo / San Nicolas",
+        "fee": 450,
+        "etaNote": "40–60 mins from depot"
+      },
+      {
+        "municipality": "Calaca / San Luis / Sta. Teresita",
+        "fee": 450,
+        "etaNote": "40–60 mins from depot"
+      }
+    ],
+    "promoCodes": [
+      {
+        "code": "BATANGAS5",
+        "discountPercent": 5,
+        "description": "5% Off Online Booking Promo",
+        "active": true
+      },
+      {
+        "code": "FIESTA10",
+        "discountPercent": 10,
+        "description": "10% Early Bird Fiesta & Wedding Discount",
+        "active": true
+      }
+    ],
+    "adminUsername": "admin",
+    "adminPassword": "password123",
+    "notificationEmailEnabled": true,
+    "notificationSmsEnabled": true
+  },
+  "inventory": [
+    {
+      "id": "item-monobloc-bare",
+      "sku": "CHR-MONO-01",
+      "name": "Monobloc Chairs (Standard White)",
+      "category": "Chairs",
+      "description": "Heavy-duty, clean commercial-grade white monobloc chairs. Ideal for birthdays, fiestas, wakes, school functions, and community gatherings.",
+      "pricePerDay": 15,
+      "totalStock": 350,
+      "imageUrl": "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 450,
+      "unitLabel": "per chair / day"
+    },
+    {
+      "id": "item-monobloc-dressed",
+      "sku": "CHR-MONO-02",
+      "name": "Monobloc Chairs with White Cover & Ribbon",
+      "category": "Chairs",
+      "description": "Clean white monobloc chair dressed with fitted spandex/cloth seat cover and your choice of motif satin ribbon (Emerald, Gold, Blush, Royal Blue, Red).",
+      "pricePerDay": 30,
+      "totalStock": 250,
+      "imageUrl": "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=900&q=80",
+      "featured": false,
+      "active": true,
+      "replacementFee": 550,
+      "unitLabel": "per chair / day"
+    },
+    {
+      "id": "item-tiffany-chair",
+      "sku": "CHR-TIFF-01",
+      "name": "Tiffany / Chiavari Chairs (with Cushion)",
+      "category": "Chairs",
+      "description": "Elegant gold & white Tiffany/Chiavari chairs complete with soft white leatherette seat pads. Perfect for weddings, debuts, VIP tables, and milestone celebrations.",
+      "pricePerDay": 80,
+      "totalStock": 160,
+      "imageUrl": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 1800,
+      "unitLabel": "per chair / day"
+    },
+    {
+      "id": "item-round-table-bare",
+      "sku": "TBL-RND-01",
+      "name": "Round Table (Without Tablecloth — 8 to 10 Pax)",
+      "category": "Tables",
+      "description": "Sturdy 5ft round banquet table that comfortably seats 8 to 10 guests. Great when you already have your own linens or need extra utility tables.",
+      "pricePerDay": 140,
+      "totalStock": 35,
+      "guestCapacity": 10,
+      "imageUrl": "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=900&q=80",
+      "featured": false,
+      "active": true,
+      "replacementFee": 3200,
+      "unitLabel": "per table / day"
+    },
+    {
+      "id": "item-round-table-clothed",
+      "sku": "TBL-RND-02",
+      "name": "Round Table with Tablecloth (8 to 10 Pax)",
+      "category": "Tables",
+      "description": "5ft round banquet table dressed with pressed floor-length damask/linen tablecloth in crisp white or cream. Ready for weddings, debuts, and banquets.",
+      "pricePerDay": 200,
+      "totalStock": 35,
+      "guestCapacity": 10,
+      "imageUrl": "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 3500,
+      "unitLabel": "per table / day"
+    },
+    {
+      "id": "item-rect-table",
+      "sku": "TBL-RECT-01",
+      "name": "Rectangular Table (6ft Folding — 6 to 8 Pax)",
+      "category": "Tables",
+      "description": "Heavy-duty 6ft rectangular folding table. Ideal for buffet lines, dining rows, registration desks, gift tables, and corporate seminars.",
+      "pricePerDay": 120,
+      "totalStock": 45,
+      "guestCapacity": 8,
+      "imageUrl": "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 2500,
+      "unitLabel": "per table / day"
+    },
+    {
+      "id": "pkg-20-pax",
+      "sku": "PKG-SET-020",
+      "name": "Set for 20 Pax (Intimate Home & Backyard Bundle)",
+      "category": "Packages",
+      "description": "Includes 20 Monobloc Chairs + 3 Rectangular or Round Tables + 3 Clean White Tablecloths. Ideal for intimate family dinners, small birthdays, and prayer gatherings.",
+      "pricePerDay": 650,
+      "totalStock": 15,
+      "guestCapacity": 20,
+      "includedItems": [
+        {
+          "itemId": "item-monobloc-bare",
+          "label": "Monobloc Chairs",
+          "quantity": 20
+        },
+        {
+          "itemId": "item-rect-table",
+          "label": "Rectangular / Round Tables",
+          "quantity": 3
+        },
+        {
+          "itemId": "addon-tablecloth",
+          "label": "Tablecloths",
+          "quantity": 3
+        }
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=900&q=80",
+      "featured": false,
+      "active": true,
+      "replacementFee": 5000,
+      "unitLabel": "per bundle / day"
+    },
+    {
+      "id": "pkg-50-pax",
+      "sku": "PKG-SET-050",
+      "name": "Set for 50 Pax (50 Chairs + 5 Round/Rect Tables + Linens)",
+      "category": "Packages",
+      "description": "Our #1 bestseller in Lemery & Taal! Includes 50 Monobloc Chairs + 5 Round or Rectangular Tables + 5 Floor-Length Tablecloths + 1 Extra Buffet Table.",
+      "pricePerDay": 1550,
+      "totalStock": 12,
+      "guestCapacity": 50,
+      "includedItems": [
+        {
+          "itemId": "item-monobloc-bare",
+          "label": "Monobloc Chairs",
+          "quantity": 50
+        },
+        {
+          "itemId": "item-round-table-clothed",
+          "label": "Dressed Round Tables (with Tablecloth)",
+          "quantity": 5
+        },
+        {
+          "itemId": "item-rect-table",
+          "label": "6ft Buffet Table",
+          "quantity": 1
+        }
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 12000,
+      "unitLabel": "per bundle / day"
+    },
+    {
+      "id": "pkg-100-pax",
+      "sku": "PKG-SET-100",
+      "name": "Set for 100 Pax (Fiesta & Grand Celebration Bundle)",
+      "category": "Packages",
+      "description": "Complete setup for 100 guests: 100 Monobloc Chairs + 10 Round Tables with Tablecloths + 10 Motif Table Runners + 2 Rectangular Buffet Tables.",
+      "pricePerDay": 3100,
+      "totalStock": 8,
+      "guestCapacity": 100,
+      "includedItems": [
+        {
+          "itemId": "item-monobloc-bare",
+          "label": "Monobloc Chairs",
+          "quantity": 100
+        },
+        {
+          "itemId": "item-round-table-clothed",
+          "label": "Dressed Round Tables (with Tablecloth)",
+          "quantity": 10
+        },
+        {
+          "itemId": "addon-runner",
+          "label": "Satin Table Runners",
+          "quantity": 10
+        },
+        {
+          "itemId": "item-rect-table",
+          "label": "6ft Buffet Tables",
+          "quantity": 2
+        }
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1478146896981-b80fe463b330?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 24000,
+      "unitLabel": "per bundle / day"
+    },
+    {
+      "id": "pkg-150-pax",
+      "sku": "PKG-SET-150",
+      "name": "Set for 150 Pax (Wedding & Debut Tiffany Premier Package)",
+      "category": "Packages",
+      "description": "All-in elegance for 150 guests: 150 Tiffany/Chiavari Chairs w/ Cushions + 15 Dressed Round Tables + 15 Satin Table Runners + 3 Buffet/Registration Tables.",
+      "pricePerDay": 13500,
+      "totalStock": 4,
+      "guestCapacity": 150,
+      "includedItems": [
+        {
+          "itemId": "item-tiffany-chair",
+          "label": "Tiffany / Chiavari Chairs w/ Cushion",
+          "quantity": 150
+        },
+        {
+          "itemId": "item-round-table-clothed",
+          "label": "Dressed Round Tables",
+          "quantity": 15
+        },
+        {
+          "itemId": "addon-runner",
+          "label": "Satin Table Runners",
+          "quantity": 15
+        },
+        {
+          "itemId": "item-rect-table",
+          "label": "6ft Buffet & Gift Tables",
+          "quantity": 3
+        }
+      ],
+      "imageUrl": "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 65000,
+      "unitLabel": "per bundle / day"
+    },
+    {
+      "id": "addon-tablecloth",
+      "sku": "ADD-LIN-01",
+      "name": "Tablecloth (White / Cream / Emerald Linen)",
+      "category": "Add-ons",
+      "description": "Freshly laundered and pressed banquet tablecloth for round or rectangular tables.",
+      "pricePerDay": 60,
+      "totalStock": 90,
+      "imageUrl": "https://images.unsplash.com/photo-1507504031003-b417219a0fde?auto=format&fit=crop&w=900&q=80",
+      "featured": false,
+      "active": true,
+      "replacementFee": 450,
+      "unitLabel": "per piece / day"
+    },
+    {
+      "id": "addon-runner",
+      "sku": "ADD-LIN-02",
+      "name": "Table Runner (Gold, Emerald, Blush, Royal Blue, Red)",
+      "category": "Add-ons",
+      "description": "Satin or organza decorative table runner to match your event color motif.",
+      "pricePerDay": 35,
+      "totalStock": 90,
+      "imageUrl": "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=900&q=80",
+      "featured": false,
+      "active": true,
+      "replacementFee": 250,
+      "unitLabel": "per piece / day"
+    },
+    {
+      "id": "addon-tent-3x3",
+      "sku": "ADD-TNT-01",
+      "name": "Heavy-Duty Tent / Canopy (3m x 3m)",
+      "category": "Add-ons",
+      "description": "Waterproof retractable outdoor event tent/canopy (3m x 3m). Protects guests from sun and rain during outdoor fiestas, wakes, and backyard parties.",
+      "pricePerDay": 550,
+      "totalStock": 10,
+      "imageUrl": "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 4800,
+      "unitLabel": "per tent / day"
+    },
+    {
+      "id": "addon-tent-3x6",
+      "sku": "ADD-TNT-02",
+      "name": "Large Event Canopy Tent (3m x 6m)",
+      "category": "Add-ons",
+      "description": "Extra-wide 3m x 6m heavy-duty canopy tent capable of covering up to 40–50 seated guests or a full catering buffet line.",
+      "pricePerDay": 950,
+      "totalStock": 6,
+      "imageUrl": "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&w=900&q=80",
+      "featured": false,
+      "active": true,
+      "replacementFee": 7500,
+      "unitLabel": "per tent / day"
+    },
+    {
+      "id": "addon-videoke",
+      "sku": "ADD-VDK-01",
+      "name": "Platinum HD Videoke Machine (with 2 Microphones)",
+      "category": "Add-ons",
+      "description": "Full-featured HD Videoke unit with thousands of updated OPM & international hits, 32-inch LED TV display, powerful speaker system, and 2 microphones.",
+      "pricePerDay": 1200,
+      "totalStock": 5,
+      "imageUrl": "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=900&q=80",
+      "featured": true,
+      "active": true,
+      "replacementFee": 18000,
+      "unitLabel": "per unit / day"
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust-1",
+      "name": "Ma. Theresa Mendoza",
+      "phone": "0917 842 1190",
+      "email": "theresa.mendoza@gmail.com",
+      "municipality": "Lemery (Proper / Poblacion)",
+      "address": "Brgy. District IV (Poblacion), Lemery, Batangas",
+      "totalBookings": 2,
+      "totalSpent": 6450,
+      "lastEventDate": "2026-11-04",
+      "notes": "Repeat customer — prefers morning delivery before 8:00 AM.",
+      "createdAt": "2026-10-25"
+    },
+    {
+      "id": "cust-2",
+      "name": "Engr. Carlo Villavicencio",
+      "phone": "0918 553 9082",
+      "email": "carlo.villavicencio@yahoo.com",
+      "municipality": "Taal (Heritage Town / Poblacion)",
+      "address": "Calle Marcela Agoncillo, Pob. Zone 3, Taal, Batangas",
+      "totalBookings": 1,
+      "totalSpent": 14100,
+      "lastEventDate": "2026-11-06",
+      "notes": "Heritage house garden wedding reception.",
+      "createdAt": "2026-11-01"
+    },
+    {
+      "id": "cust-3",
+      "name": "Kap. Roberto Ilagan",
+      "phone": "0927 301 4412",
+      "email": "roberto.ilagan.brgy@gmail.com",
+      "municipality": "Lemery (Outer Barangays)",
+      "address": "Brgy. Mataas na Bayan Covered Court, Lemery, Batangas",
+      "totalBookings": 1,
+      "totalSpent": 4300,
+      "lastEventDate": "2026-11-03",
+      "notes": "Barangay Fiesta committee booking.",
+      "createdAt": "2026-10-25"
+    },
+    {
+      "id": "cust-4",
+      "name": "Clarisse De Leon",
+      "phone": "0995 612 7734",
+      "email": "clarissedeleon18@gmail.com",
+      "municipality": "Taal (Outer Barangays)",
+      "address": "Villa Tortuga Events Place, Brgy. Butong, Taal, Batangas",
+      "totalBookings": 1,
+      "totalSpent": 3900,
+      "lastEventDate": "2026-11-09",
+      "notes": "18th Debut Celebration - Emerald & Gold motif.",
+      "createdAt": "2026-11-03"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "bk-1001",
+      "referenceNumber": "MMC-2026-1001",
+      "customerId": "cust-1",
+      "customerName": "Ma. Theresa Mendoza",
+      "customerPhone": "0917 842 1190",
+      "customerEmail": "theresa.mendoza@gmail.com",
+      "eventType": "Birthday",
+      "eventDate": "2026-11-04",
+      "returnDate": "2026-11-04",
+      "rentalDays": 1,
+      "eventTime": "09:00 AM",
+      "municipality": "Lemery (Proper / Poblacion)",
+      "barangay": "District IV (Poblacion)",
+      "venueAddress": "142 Illustre Ave., Brgy. District IV, Lemery, Batangas",
+      "fulfillmentType": "Delivery",
+      "includeSetup": true,
+      "status": "Out for Delivery",
+      "paymentStatus": "Deposit Paid",
+      "paymentMethod": "GCash",
+      "subtotal": 2100,
+      "deliveryFee": 150,
+      "setupFee": 300,
+      "discountAmount": 0,
+      "damageFeeTotal": 0,
+      "totalAmount": 2550,
+      "depositRequired": 765,
+      "amountPaid": 1000,
+      "balanceDue": 1550,
+      "notes": "Please include emerald green table runners if available. Gate is beside the bakery.",
+      "adminNotes": "Loaded on Truck #1 at 7:30 AM.",
+      "createdAt": "2026-11-01",
+      "updatedAt": "2026-11-04",
+      "items": [
+        {
+          "id": "bki-1",
+          "itemId": "pkg-50-pax",
+          "itemName": "Set for 50 Pax (50 Chairs + 5 Round/Rect Tables + Linens)",
+          "category": "Packages",
+          "quantity": 1,
+          "pricePerDay": 1550,
+          "lineTotal": 1550
+        },
+        {
+          "id": "bki-2",
+          "itemId": "addon-tent-3x3",
+          "itemName": "Heavy-Duty Tent / Canopy (3m x 3m)",
+          "category": "Add-ons",
+          "quantity": 1,
+          "pricePerDay": 550,
+          "lineTotal": 550
+        }
+      ],
+      "payments": [
+        {
+          "id": "pay-101",
+          "bookingId": "bk-1001",
+          "amount": 1000,
+          "type": "Deposit",
+          "method": "GCash",
+          "referenceNo": "GC-9084127731",
+          "verifiedByAdmin": true,
+          "createdAt": "2026-11-01"
+        }
+      ],
+      "damageLogs": []
+    },
+    {
+      "id": "bk-1002",
+      "referenceNumber": "MMC-2026-1002",
+      "customerId": "cust-3",
+      "customerName": "Kap. Roberto Ilagan",
+      "customerPhone": "0927 301 4412",
+      "customerEmail": "roberto.ilagan.brgy@gmail.com",
+      "eventType": "Fiesta",
+      "eventDate": "2026-11-03",
+      "returnDate": "2026-11-04",
+      "rentalDays": 2,
+      "eventTime": "08:00 AM",
+      "municipality": "Lemery (Outer Barangays)",
+      "barangay": "Mataas na Bayan",
+      "venueAddress": "Mataas na Bayan Covered Court, Lemery, Batangas",
+      "fulfillmentType": "Delivery",
+      "includeSetup": false,
+      "status": "In Use",
+      "paymentStatus": "Fully Paid",
+      "paymentMethod": "Cash",
+      "subtotal": 4050,
+      "deliveryFee": 250,
+      "setupFee": 0,
+      "discountAmount": 0,
+      "damageFeeTotal": 0,
+      "totalAmount": 4300,
+      "depositRequired": 1290,
+      "amountPaid": 4300,
+      "balanceDue": 0,
+      "notes": "Pickup scheduled for today at 4:00 PM after fiesta program.",
+      "adminNotes": "Remind driver to count all 100 monobloc chairs on pickup.",
+      "createdAt": "2026-10-25",
+      "updatedAt": "2026-11-03",
+      "items": [
+        {
+          "id": "bki-3",
+          "itemId": "item-monobloc-bare",
+          "itemName": "Monobloc Chairs (Standard White)",
+          "category": "Chairs",
+          "quantity": 100,
+          "pricePerDay": 15,
+          "lineTotal": 3000
+        },
+        {
+          "id": "bki-4",
+          "itemId": "item-rect-table",
+          "itemName": "Rectangular Table (6ft Folding — 6 to 8 Pax)",
+          "category": "Tables",
+          "quantity": 5,
+          "pricePerDay": 120,
+          "lineTotal": 1200
+        }
+      ],
+      "payments": [
+        {
+          "id": "pay-102",
+          "bookingId": "bk-1002",
+          "amount": 4300,
+          "type": "Full Payment",
+          "method": "Cash",
+          "referenceNo": "OR-2026-088",
+          "verifiedByAdmin": true,
+          "createdAt": "2026-11-03"
+        }
+      ],
+      "damageLogs": []
+    },
+    {
+      "id": "bk-1003",
+      "referenceNumber": "MMC-2026-1003",
+      "customerId": "cust-2",
+      "customerName": "Engr. Carlo Villavicencio",
+      "customerPhone": "0918 553 9082",
+      "customerEmail": "carlo.villavicencio@yahoo.com",
+      "eventType": "Wedding",
+      "eventDate": "2026-11-06",
+      "returnDate": "2026-11-06",
+      "rentalDays": 1,
+      "eventTime": "02:00 PM",
+      "municipality": "Taal (Heritage Town / Poblacion)",
+      "barangay": "Zone 3 Poblacion",
+      "venueAddress": "Villavicencio Ancestral Garden, Calle Marcela Agoncillo, Taal, Batangas",
+      "fulfillmentType": "Delivery",
+      "includeSetup": true,
+      "status": "Confirmed",
+      "paymentStatus": "Deposit Paid",
+      "paymentMethod": "Bank Transfer",
+      "subtotal": 13500,
+      "deliveryFee": 0,
+      "setupFee": 600,
+      "discountAmount": 0,
+      "damageFeeTotal": 0,
+      "totalAmount": 14100,
+      "depositRequired": 4230,
+      "amountPaid": 5000,
+      "balanceDue": 9100,
+      "notes": "Gold Tiffany chairs with white cushions and gold runners. Setup must finish by 11:30 AM.",
+      "adminNotes": "VIP Wedding near Taal Basilica. Prep cleanest linens.",
+      "createdAt": "2026-11-01",
+      "updatedAt": "2026-11-01",
+      "items": [
+        {
+          "id": "bki-5",
+          "itemId": "pkg-150-pax",
+          "itemName": "Set for 150 Pax (Wedding & Debut Tiffany Premier Package)",
+          "category": "Packages",
+          "quantity": 1,
+          "pricePerDay": 13500,
+          "lineTotal": 13500
+        }
+      ],
+      "payments": [
+        {
+          "id": "pay-103",
+          "bookingId": "bk-1003",
+          "amount": 5000,
+          "type": "Deposit",
+          "method": "Bank Transfer",
+          "referenceNo": "BDO-TRF-774192",
+          "verifiedByAdmin": true,
+          "createdAt": "2026-11-01"
+        }
+      ],
+      "damageLogs": []
+    },
+    {
+      "id": "bk-1004",
+      "referenceNumber": "MMC-2026-1004",
+      "customerId": "cust-4",
+      "customerName": "Clarisse De Leon",
+      "customerPhone": "0995 612 7734",
+      "customerEmail": "clarissedeleon18@gmail.com",
+      "eventType": "Debut",
+      "eventDate": "2026-11-09",
+      "returnDate": "2026-11-09",
+      "rentalDays": 1,
+      "eventTime": "05:00 PM",
+      "municipality": "Taal (Outer Barangays)",
+      "barangay": "Butong",
+      "venueAddress": "Villa Tortuga Pavilion, Brgy. Butong, Taal, Batangas",
+      "fulfillmentType": "Delivery",
+      "includeSetup": true,
+      "status": "Pending",
+      "paymentStatus": "Unpaid",
+      "paymentMethod": "GCash",
+      "subtotal": 3300,
+      "deliveryFee": 300,
+      "setupFee": 300,
+      "discountAmount": 0,
+      "damageFeeTotal": 0,
+      "totalAmount": 3900,
+      "depositRequired": 1170,
+      "amountPaid": 0,
+      "balanceDue": 3900,
+      "notes": "Awaiting GCash deposit screenshot from client.",
+      "adminNotes": "New booking received via website.",
+      "createdAt": "2026-11-03",
+      "updatedAt": "2026-11-03",
+      "items": [
+        {
+          "id": "bki-6",
+          "itemId": "pkg-100-pax",
+          "itemName": "Set for 100 Pax (Fiesta & Grand Celebration Bundle)",
+          "category": "Packages",
+          "quantity": 1,
+          "pricePerDay": 3100,
+          "lineTotal": 3100
+        },
+        {
+          "id": "bki-7",
+          "itemId": "item-round-table-clothed",
+          "itemName": "Round Table with Tablecloth (8 to 10 Pax)",
+          "category": "Tables",
+          "quantity": 1,
+          "pricePerDay": 200,
+          "lineTotal": 200
+        }
+      ],
+      "payments": [],
+      "damageLogs": []
+    }
+  ],
+  "damageLogs": [
+    {
+      "id": "dmg-01",
+      "bookingId": "bk-1002",
+      "referenceNumber": "MMC-2026-1002",
+      "customerName": "Kap. Roberto Ilagan",
+      "itemName": "Tablecloth (White / Cream / Emerald Linen)",
+      "issueType": "Stained / Torn",
+      "quantity": 1,
+      "feeCharged": 150,
+      "resolved": true,
+      "notes": "Candle wax stain on 1 rectangular cloth — settled in cash.",
+      "createdAt": "2026-11-03"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-1",
+      "type": "NEW_BOOKING",
+      "title": "New Booking Request: MMC-2026-1004",
+      "message": "Clarisse De Leon booked Set for 100 Pax for a Debut in Brgy. Butong, Taal (₱3,900).",
+      "referenceNumber": "MMC-2026-1004",
+      "read": false,
+      "createdAt": "2026-11-03"
+    },
+    {
+      "id": "notif-2",
+      "type": "PAYMENT_UPLOADED",
+      "title": "Deposit Verified: MMC-2026-1001",
+      "message": "Ma. Theresa Mendoza paid ₱1,000 via GCash (Ref: GC-9084127731).",
+      "referenceNumber": "MMC-2026-1001",
+      "read": false,
+      "createdAt": "2026-11-01"
+    }
+  ],
+  "gallery": [
+    {
+      "id": "gal-1",
+      "title": "Taal Heritage Garden Wedding Reception",
+      "eventType": "Wedding",
+      "location": "Poblacion, Taal, Batangas",
+      "guestCount": 150,
+      "imageUrl": "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1000&q=80",
+      "description": "150 Gold Tiffany Chairs paired with crisp white floor-length damask linens and emerald runners near the Basilica of St. Martin of Tours.",
+      "date": "October 2026"
+    },
+    {
+      "id": "gal-2",
+      "title": "Brgy. Sambal Ilaya Town Fiesta Banquet",
+      "eventType": "Fiesta",
+      "location": "Sambal Ilaya, Lemery, Batangas",
+      "guestCount": 200,
+      "imageUrl": "https://images.unsplash.com/photo-1478146896981-b80fe463b330?auto=format&fit=crop&w=1000&q=80",
+      "description": "200 heavy-duty monobloc chairs, 20 round banquet tables, and 4 large canopy tents for an all-day fiesta celebration.",
+      "date": "September 2026"
+    },
+    {
+      "id": "gal-3",
+      "title": "18th Birthday Debut at Lemery Baywalk Event Hall",
+      "eventType": "Debut",
+      "location": "Nonong Casto, Lemery, Batangas",
+      "guestCount": 100,
+      "imageUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80",
+      "description": "100 dressed chairs with satin ribbons and 10 round banquet tables styled in champagne gold and warm white.",
+      "date": "August 2026"
+    },
+    {
+      "id": "gal-4",
+      "title": "School Recognition & Alumni Homecoming",
+      "eventType": "School Function",
+      "location": "District I, Lemery, Batangas",
+      "guestCount": 300,
+      "imageUrl": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1000&q=80",
+      "description": "300 monobloc seats and VIP registration tables delivered and arranged ahead of the 7:00 AM assembly.",
+      "date": "July 2026"
+    },
+    {
+      "id": "gal-5",
+      "title": "Intimate 60th Birthday Backyard Gathering",
+      "eventType": "Birthday",
+      "location": "Tierra Alta, Taal, Batangas",
+      "guestCount": 50,
+      "imageUrl": "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1000&q=80",
+      "description": "50-Pax Set with 5 dressed round tables, buffet rectangular table, and two 3x3m canopy tents.",
+      "date": "June 2026"
+    },
+    {
+      "id": "gal-6",
+      "title": "Dignified Family Wake & Memorial Service Setup",
+      "eventType": "Funeral / Wake",
+      "location": "Dayapan, Lemery, Batangas",
+      "guestCount": 80,
+      "imageUrl": "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=1000&q=80",
+      "description": "Multi-day rental of 80 white monobloc chairs, 6 rectangular tables, and weatherproof canopy tents with prompt same-day delivery.",
+      "date": "May 2026"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev-1",
+      "customerName": "Ma. Theresa Mendoza",
+      "eventType": "Birthday",
+      "location": "District IV, Lemery, Batangas",
+      "rating": 5,
+      "comment": "Super linis ng mga silya at tablecloths! Dumating sila ng 7:30 AM kahit 9:00 AM pa ang party namin. Very polite ang delivery team ng MMC Set n Seat Rentals.",
+      "date": "2 weeks ago"
+    },
+    {
+      "id": "rev-2",
+      "customerName": "Engr. Carlo & Mia Villavicencio",
+      "eventType": "Wedding",
+      "location": "Poblacion, Taal, Batangas",
+      "rating": 5,
+      "comment": "Booked the 150-pax Tiffany chair package for our garden wedding in Taal. The chairs looked brand new and the cushions were spotless. Hassle-free kausap!",
+      "date": "1 month ago"
+    },
+    {
+      "id": "rev-3",
+      "customerName": "Kap. Roberto Ilagan",
+      "eventType": "Fiesta",
+      "location": "Mataas na Bayan, Lemery",
+      "rating": 5,
+      "comment": "Maaasahan talaga sa fiesta at barangay events. Kumpleto ang bilang, matibay ang mga monobloc at folding tables, at mabilis mag-deliver.",
+      "date": "1 month ago"
+    },
+    {
+      "id": "rev-4",
+      "customerName": "Jocelyn Catapang",
+      "eventType": "Funeral / Wake",
+      "location": "Mahayahay, Lemery, Batangas",
+      "rating": 5,
+      "comment": "Nung kinailangan namin ng biglaang tents at 80 chairs para sa lamay, na-deliver agad nila within 2 hours. Maraming salamat po sa mabilis na tulong.",
+      "date": "2 months ago"
+    }
+  ]
+}

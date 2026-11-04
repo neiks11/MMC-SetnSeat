@@ -1,0 +1,140 @@
+// Prisma Schema for MMC Set n Seat Rentals (SQLite / PostgreSQL compatible)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model BusinessSettings {
+  id                     String   @id @default("default")
+  businessName           String   @default("MMC Set n Seat Rentals")
+  tagline                String   @default("Reliable Table & Chair Rentals in Lemery & Taal, Batangas")
+  phone                  String   @default("0956 403 5020")
+  email                  String   @default("setnseatrentals@gmail.com")
+  facebookUrl            String   @default("https://www.facebook.com/profile.php?id=61585212946153")
+  messengerName          String   @default("MMC Setnseat Rentals")
+  serviceArea            String   @default("Lemery and Taal, Batangas (and nearby towns)")
+  depositPercent         Int      @default(30)
+  defaultDeliveryFee     Float    @default(300)
+  defaultSetupFee        Float    @default(250)
+  freeDeliveryMinOrder   Float    @default(5000)
+  gcashNumber            String   @default("0956 403 5020 (MMC Set n Seat)")
+  bankDetails            String   @default("BDO Savings: 0012-3456-7890 | Account Name: MMC Set n Seat Rentals")
+  adminUsername          String   @default("admin")
+  adminPasswordHash      String   @default("mmc2025")
+  updatedAt              DateTime @updatedAt
+}
+
+model InventoryItem {
+  id             String        @id @default(cuid())
+  sku            String        @unique
+  name           String
+  category       String        // "Chairs" | "Tables" | "Packages" | "Add-ons"
+  description    String
+  pricePerDay    Float
+  totalStock     Int
+  imageUrl       String
+  featured       Boolean       @default(false)
+  active         Boolean       @default(true)
+  guestCapacity  Int?          // For packages or tables (e.g. 8 pax, 50 pax)
+  includedItems  String?       // JSON array of [{ itemId, qty, label }] for packages so stock deducts accurately
+  replacementFee Float         @default(500)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  bookingItems   BookingItem[]
+}
+
+model Customer {
+  id          String    @id @default(cuid())
+  name        String
+  phone       String
+  email       String
+  address     String
+  notes       String?
+  totalSpent  Float     @default(0)
+  createdAt   DateTime  @default(now())
+  bookings    Booking[]
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  referenceNumber    String        @unique
+  customerId         String
+  customer           Customer      @relation(fields: [customerId], references: [id])
+  customerName       String
+  customerPhone      String
+  customerEmail      String
+  eventType          String        // Wedding, Birthday, Debut, Funeral/Wake, Fiesta, Corporate, School Function
+  eventDate          String        // YYYY-MM-DD (Start Date)
+  returnDate         String        // YYYY-MM-DD (End Date)
+  rentalDays         Int           @default(1)
+  eventTime          String        // e.g., "08:00 AM"
+  municipality       String        // Lemery, Taal, Agoncillo, Calaca, San Nicolas, etc.
+  barangay           String
+  venueAddress       String
+  fulfillmentType    String        // "Delivery" | "Customer Pickup"
+  includeSetup       Boolean       @default(false)
+  status             String        @default("Pending") // Pending, Confirmed, Out for Delivery, In Use, Returned, Completed, Cancelled
+  paymentStatus      String        @default("Unpaid")  // Unpaid, Deposit Paid, Fully Paid, Refunded
+  paymentMethod      String        // Cash, GCash/Maya, Bank Transfer
+  subtotal           Float
+  deliveryFee        Float         @default(0)
+  setupFee           Float         @default(0)
+  discountAmount     Float         @default(0)
+  discountCode       String?
+  damageFeeTotal     Float         @default(0)
+  totalAmount        Float
+  depositRequired    Float
+  amountPaid         Float         @default(0)
+  balanceDue         Float
+  notes              String?
+  adminNotes         String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  items              BookingItem[]
+  payments           PaymentLog[]
+  damageLogs         DamageLog[]
+}
+
+model BookingItem {
+  id          String        @id @default(cuid())
+  bookingId   String
+  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        InventoryItem @relation(fields: [itemId], references: [id])
+  itemName    String
+  category    String
+  quantity    Int
+  pricePerDay Float
+  lineTotal   Float
+}
+
+model PaymentLog {
+  id              String   @id @default(cuid())
+  bookingId       String
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount          Float
+  type            String   // "Deposit" | "Balance" | "Full Payment" | "Damage Fee"
+  method          String   // "Cash" | "GCash" | "Maya" | "Bank Transfer"
+  referenceNo     String?
+  proofImageUrl   String?  // Base64 or uploaded image URL
+  verifiedByAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
+}
+
+model DamageLog {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  itemName    String
+  issueType   String   // "Damaged" | "Missing/Lost" | "Stained/Torn" | "Late Return"
+  quantity    Int
+  feeCharged  Float
+  resolved    Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+

@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 26, 20, 18;
+  --background-rgb: 252, 250, 247;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@layer components {
+  /* Standardized horizontal page container */
+  .layout-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Standardized vertical section padding */
+  .section-spacing {
+    @apply py-12 sm:py-16 lg:py-20;
+  }
+
+  /* Standardized inner tab view wrapper */
+  .tab-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-8 sm:space-y-10;
+  }
+
+  /* Standardized card surfaces */
+  .card-panel {
+    @apply bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-sm;
+  }
+
+  .card-compact {
+    @apply bg-white rounded-2xl border border-gray-200/90 p-5 sm:p-6 shadow-sm;
+  }
+}
+
+/* Print stylesheet for receipts, invoices & delivery slips */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-document,
+  #printable-document * {
+    visibility: visible;
+  }
+  #printable-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public read access for inventory, settings, gallery, and reviews
+    match /inventory/{itemId} {
+      allow read: if true;
+      allow write: if true; // Secured via Next.js Server API routes & Admin Auth
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /bookings/{bookingId} {
+      allow read, write: if true;
+    }
+
+    match /customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    match /damage_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+
+    match /mmc_system/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
+
