@@ -550,27 +550,23 @@ export default function CustomerApp() {
     return true;
   });
 
-  // Core quick-quote items for the Hero Availability Widget (White Monobloc, Dressed Monobloc, Gold Tiffany, Dressed Round Table, 6ft Rect Table, Canopy Tent)
-  const heroQuickItems = useMemo(() => {
-    const preferredIds = [
-      'item-monobloc-bare',
-      'item-monobloc-dressed',
-      'item-tiffany-chair',
-      'item-round-table-clothed',
-      'item-rect-table',
-    ];
-    const picked = preferredIds
-      .map((id) => inventory.find((i) => i.id === id && i.active))
-      .filter(Boolean) as InventoryItem[];
-    return picked.length > 0 ? picked : inventory.filter((i) => i.active).slice(0, 5);
-  }, [inventory]);
+  // Core quick-quote items for the Hero Availability Widget (White Monobloc, Dressed Monobloc, Gold Tiffany, Dressed Round Table, 6ft Rect Table)
+  const preferredQuickIds = [
+    'item-monobloc-bare',
+    'item-monobloc-dressed',
+    'item-tiffany-chair',
+    'item-round-table-clothed',
+    'item-rect-table',
+  ];
+  const pickedQuick = preferredQuickIds
+    .map((id) => inventory.find((i) => i.id === id && i.active))
+    .filter(Boolean) as InventoryItem[];
+  const heroQuickItems =
+    pickedQuick.length > 0 ? pickedQuick : inventory.filter((i) => i.active).slice(0, 5);
 
-  const currentZone = useMemo(
-    () =>
-      settings.deliveryZones.find((z) => z.municipality === municipality) ||
-      settings.deliveryZones[0],
-    [settings.deliveryZones, municipality]
-  );
+  const currentZone =
+    settings.deliveryZones.find((z) => z.municipality === municipality) ||
+    settings.deliveryZones[0];
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-charcoal-900 pb-24 md:pb-0">
