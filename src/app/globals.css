@@ -4,13 +4,21 @@
 
 :root {
   --foreground-rgb: 26, 20, 18;
-  --background-rgb: 252, 250, 247;
+  --background-rgb: 250, 248, 245;
+  --brand-maroon: #7B2D26;
+  --brand-maroon-dark: #5C1F1A;
+  --brand-gold: #DDA843;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
+  font-family: var(--font-body), sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: var(--font-heading), var(--font-body), sans-serif;
 }
 
 html {
@@ -18,14 +26,14 @@ html {
 }
 
 @layer components {
-  /* Standardized horizontal page container */
+  /* 8px-grid standardized horizontal page container */
   .layout-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
-  /* Standardized vertical section padding */
+  /* 8px-grid standardized vertical section padding (64px mobile / 80px desktop) */
   .section-spacing {
-    @apply py-12 sm:py-16 lg:py-20;
+    @apply py-14 sm:py-16 lg:py-20;
   }
 
   /* Standardized inner tab view wrapper */
@@ -33,7 +41,7 @@ html {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-8 sm:space-y-10;
   }
 
-  /* Standardized card surfaces */
+  /* Standardized card surfaces with consistent 16px radius & subtle elevation */
   .card-panel {
     @apply bg-white rounded-2xl border border-gray-200/90 p-6 sm:p-8 shadow-sm;
   }

@@ -37,7 +37,7 @@ export interface ClientFirebaseConfig {
   appId?: string;
 }
 
-const LOCAL_DB_KEY = 'mmc_setnseat_db_v1';
+const LOCAL_DB_KEY = 'mmc_setnseat_db_v2';
 const LOCAL_FB_CONFIG_KEY = 'mmc_setnseat_fb_config_v1';
 
 /**
@@ -184,7 +184,7 @@ function calculateRentalDays(eventDate: string, returnDate: string): number {
   const start = new Date(eventDate + 'T00:00:00');
   const end = new Date(returnDate + 'T00:00:00');
   const diffDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(1, diffDays + 1);
+  return Math.max(1, diffDays);
 }
 
 function generateReferenceNumber(existingBookings: Booking[]): string {

@@ -92,7 +92,7 @@ export function calculateRentalDays(eventDate: string, returnDate: string): numb
   const end = new Date(returnDate + 'T00:00:00');
   const diffTime = end.getTime() - start.getTime();
   const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(1, diffDays + 1);
+  return Math.max(1, diffDays);
 }
 
 export interface ItemAvailability {
