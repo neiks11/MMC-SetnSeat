@@ -1,6 +1,7 @@
 'use client';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { getAnalytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import {
   getFirestore,
   Firestore,
@@ -10,6 +11,13 @@ import {
   collection,
   writeBatch,
 } from 'firebase/firestore';
+import {
+  getDatabase,
+  Database,
+  ref as dbRef,
+  get as dbGet,
+  set as dbSet,
+} from 'firebase/database';
 import {
   DatabaseSchema,
   Booking,
@@ -31,11 +39,24 @@ export interface ItemAvailability {
 export interface ClientFirebaseConfig {
   apiKey: string;
   authDomain: string;
+  databaseURL?: string;
   projectId: string;
   storageBucket?: string;
   messagingSenderId?: string;
   appId?: string;
+  measurementId?: string;
 }
+
+export const DEFAULT_CLIENT_FIREBASE_CONFIG: ClientFirebaseConfig = {
+  apiKey: 'AIzaSyBON-Jjt0-p10vBR0DhO3Zg9Ue6rnI2T9k',
+  authDomain: 'mmcsetandseat.firebaseapp.com',
+  databaseURL: 'https://mmcsetandseat-default-rtdb.firebaseio.com',
+  projectId: 'mmcsetandseat',
+  storageBucket: 'mmcsetandseat.firebasestorage.app',
+  messagingSenderId: '401059693863',
+  appId: '1:401059693863:web:d575ab3db44106bd521502',
+  measurementId: 'G-RC7BLP8FG3',
+};
 
 const LOCAL_DB_KEY = 'mmc_setnseat_db_v2';
 const LOCAL_FB_CONFIG_KEY = 'mmc_setnseat_fb_config_v1';
@@ -50,6 +71,39 @@ export function getAssetPath(relativePath: string): string {
   return `${basePath}${clean}`;
 }
 
+function normalizeClientSchema(
+  raw: Partial<DatabaseSchema> | null | undefined,
+  fallback: DatabaseSchema
+): DatabaseSchema {
+  if (!raw || typeof raw !== 'object') return fallback;
+  return {
+    settings: {
+      ...fallback.settings,
+      ...(raw.settings || {}),
+      deliveryZones: Array.isArray(raw.settings?.deliveryZones)
+        ? raw.settings!.deliveryZones
+        : fallback.settings.deliveryZones,
+      promoCodes: Array.isArray(raw.settings?.promoCodes)
+        ? raw.settings!.promoCodes
+        : fallback.settings.promoCodes,
+    },
+    inventory: Array.isArray(raw.inventory) ? raw.inventory : fallback.inventory,
+    bookings: Array.isArray(raw.bookings)
+      ? raw.bookings.map((b) => ({
+          ...b,
+          items: Array.isArray(b.items) ? b.items : [],
+          payments: Array.isArray(b.payments) ? b.payments : [],
+          damageLogs: Array.isArray(b.damageLogs) ? b.damageLogs : [],
+        }))
+      : [],
+    customers: Array.isArray(raw.customers) ? raw.customers : [],
+    damageLogs: Array.isArray(raw.damageLogs) ? raw.damageLogs : [],
+    notifications: Array.isArray(raw.notifications) ? raw.notifications : [],
+    gallery: Array.isArray(raw.gallery) ? raw.gallery : fallback.gallery,
+    reviews: Array.isArray(raw.reviews) ? raw.reviews : fallback.reviews,
+  };
+}
+
 export function getClientFirebaseConfig(): ClientFirebaseConfig | null {
   if (
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
@@ -61,12 +115,16 @@ export function getClientFirebaseConfig(): ClientFirebaseConfig | null {
       authDomain:
         process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
         `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+      databaseURL:
+        process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
+        DEFAULT_CLIENT_FIREBASE_CONFIG.databaseURL,
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
       storageBucket:
         process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-        `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`,
+        `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`,
       messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
       appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
+      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
     };
   }
 
@@ -75,13 +133,18 @@ export function getClientFirebaseConfig(): ClientFirebaseConfig | null {
       const raw = window.localStorage.getItem(LOCAL_FB_CONFIG_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as ClientFirebaseConfig;
-        if (parsed.apiKey && parsed.projectId) return parsed;
+        if (parsed.apiKey && parsed.projectId) {
+          return {
+            ...DEFAULT_CLIENT_FIREBASE_CONFIG,
+            ...parsed,
+          };
+        }
       }
     } catch {
       // ignore storage errors
     }
   }
-  return null;
+  return DEFAULT_CLIENT_FIREBASE_CONFIG;
 }
 
 function saveClientFirebaseConfig(config: ClientFirebaseConfig): void {
@@ -90,18 +153,49 @@ function saveClientFirebaseConfig(config: ClientFirebaseConfig): void {
   }
 }
 
-function getClientFirestore(): { db: Firestore | null; projectId: string | null } {
+let analyticsInitialized = false;
+
+function getClientFirestore(): {
+  db: Firestore | null;
+  rtdb: Database | null;
+  projectId: string | null;
+} {
   const config = getClientFirebaseConfig();
   if (!config || !config.apiKey || !config.projectId) {
-    return { db: null, projectId: null };
+    return { db: null, rtdb: null, projectId: null };
   }
   try {
     const appName = `mmc-client-fb-${config.projectId}`;
     const existing = getApps().find((a) => a.name === appName);
     const app: FirebaseApp = existing || initializeApp(config, appName);
-    return { db: getFirestore(app), projectId: config.projectId };
+
+    if (typeof window !== 'undefined' && !analyticsInitialized && config.measurementId) {
+      analyticsInitialized = true;
+      isAnalyticsSupported()
+        .then((yes) => {
+          if (yes) getAnalytics(app);
+        })
+        .catch(() => {});
+    }
+
+    let rtdb: Database | null = null;
+    let db: Firestore | null = null;
+    try {
+      if (config.databaseURL) {
+        rtdb = getDatabase(app, config.databaseURL);
+      }
+    } catch {
+      // ignore rtdb init error
+    }
+    try {
+      db = getFirestore(app);
+    } catch {
+      // ignore firestore init error
+    }
+
+    return { db, rtdb, projectId: config.projectId };
   } catch {
-    return { db: null, projectId: null };
+    return { db: null, rtdb: null, projectId: null };
   }
 }
 
@@ -114,7 +208,7 @@ function readBrowserCache(): DatabaseSchema {
       window.localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(seed));
       return seed;
     }
-    return JSON.parse(raw) as DatabaseSchema;
+    return normalizeClientSchema(JSON.parse(raw), getInitialSeedData());
   } catch {
     return getInitialSeedData();
   }
@@ -132,12 +226,31 @@ function writeBrowserCache(data: DatabaseSchema): void {
 
 async function readClientDb(): Promise<DatabaseSchema> {
   const local = readBrowserCache();
-  const { db } = getClientFirestore();
+  const { db, rtdb } = getClientFirestore();
+
+  // 1. Primary: Firebase Realtime Database (https://mmcsetandseat-default-rtdb.firebaseio.com)
+  if (rtdb) {
+    try {
+      const snap = await dbGet(dbRef(rtdb, 'mmc_system/state_snapshot'));
+      if (snap.exists()) {
+        const cloud = normalizeClientSchema(snap.val(), local);
+        writeBrowserCache(cloud);
+        return cloud;
+      } else {
+        await writeClientDb(local);
+        return local;
+      }
+    } catch {
+      // Fall through to Firestore / local cache
+    }
+  }
+
+  // 2. Fallback: Cloud Firestore
   if (db) {
     try {
       const snap = await getDoc(doc(db, 'mmc_system', 'state_snapshot'));
       if (snap.exists()) {
-        const cloud = snap.data() as DatabaseSchema;
+        const cloud = normalizeClientSchema(snap.data() as DatabaseSchema, local);
         writeBrowserCache(cloud);
         return cloud;
       } else {
@@ -153,26 +266,46 @@ async function readClientDb(): Promise<DatabaseSchema> {
 
 async function writeClientDb(data: DatabaseSchema): Promise<{ syncedToFirebase: boolean }> {
   writeBrowserCache(data);
-  const { db } = getClientFirestore();
-  if (!db) return { syncedToFirebase: false };
+  const { db, rtdb } = getClientFirestore();
+  const cleanData = JSON.parse(JSON.stringify(data)) as DatabaseSchema;
+  let synced = false;
 
-  try {
-    const cleanData = JSON.parse(JSON.stringify(data)) as DatabaseSchema;
-    await setDoc(doc(db, 'mmc_system', 'state_snapshot'), cleanData);
-
-    const batch = writeBatch(db);
-    batch.set(doc(collection(db, 'settings'), 'default'), cleanData.settings);
-    for (const item of cleanData.inventory.slice(0, 50)) {
-      batch.set(doc(collection(db, 'inventory'), item.id), item);
+  // 1. Write to Firebase Realtime Database
+  if (rtdb) {
+    try {
+      await dbSet(dbRef(rtdb, 'mmc_system/state_snapshot'), cleanData);
+      await dbSet(dbRef(rtdb, 'settings'), cleanData.settings);
+      await dbSet(dbRef(rtdb, 'inventory'), cleanData.inventory);
+      await dbSet(dbRef(rtdb, 'bookings'), cleanData.bookings);
+      await dbSet(dbRef(rtdb, 'customers'), cleanData.customers);
+      await dbSet(dbRef(rtdb, 'damage_logs'), cleanData.damageLogs);
+      synced = true;
+    } catch {
+      // ignore RTDB write error
     }
-    for (const booking of cleanData.bookings.slice(0, 50)) {
-      batch.set(doc(collection(db, 'bookings'), booking.id), booking);
-    }
-    await batch.commit();
-    return { syncedToFirebase: true };
-  } catch {
-    return { syncedToFirebase: false };
   }
+
+  // 2. Also sync to Cloud Firestore if enabled
+  if (db) {
+    try {
+      await setDoc(doc(db, 'mmc_system', 'state_snapshot'), cleanData);
+
+      const batch = writeBatch(db);
+      batch.set(doc(collection(db, 'settings'), 'default'), cleanData.settings);
+      for (const item of cleanData.inventory.slice(0, 50)) {
+        batch.set(doc(collection(db, 'inventory'), item.id), item);
+      }
+      for (const booking of cleanData.bookings.slice(0, 50)) {
+        batch.set(doc(collection(db, 'bookings'), booking.id), booking);
+      }
+      await batch.commit();
+      synced = true;
+    } catch {
+      // ignore Firestore write error
+    }
+  }
+
+  return { syncedToFirebase: synced };
 }
 
 function datesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
