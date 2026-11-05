@@ -489,13 +489,6 @@ export default function CustomerApp() {
               <Facebook className="w-3.5 h-3.5 text-amber-300" />
               <span>{settings.messengerName}</span>
             </a>
-            <Link
-              href="/admin"
-              className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 font-semibold"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Admin Portal</span>
-            </Link>
           </div>
         </div>
       </div>
@@ -609,12 +602,6 @@ export default function CustomerApp() {
                 {tab.label}
               </button>
             ))}
-            <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 px-3">
-              <span>Admin or Staff?</span>
-              <Link href="/admin" className="text-emerald-700 font-bold underline">
-                Go to Admin Dashboard →
-              </Link>
-            </div>
           </div>
         )}
       </header>
@@ -2560,15 +2547,13 @@ export default function CustomerApp() {
           </div>
 
           <div className="space-y-2">
-            <div className="font-bold text-white uppercase">Owner & Staff Access</div>
-            <p>Manage bookings, edit inventory prices & stock, upload item photos, and print receipts:</p>
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl transition"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Open Admin Dashboard</span>
-            </Link>
+            <div className="font-bold text-white uppercase">Delivery & Service Guarantee</div>
+            <p className="leading-relaxed">
+              Sanitized chairs, freshly pressed table linens, and punctual truck dispatch for weddings, birthdays, debuts, fiestas, and wakes across Lemery & Taal.
+            </p>
+            <div className="text-amber-300 font-semibold pt-1">
+              Open Daily: 7:00 AM – 8:00 PM
+            </div>
           </div>
         </div>
       </footer>
