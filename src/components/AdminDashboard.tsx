@@ -45,7 +45,7 @@ import {
   DamageLog,
   NotificationAlert,
 } from '@/lib/types';
-import { ItemAvailability } from '@/lib/db';
+import { ItemAvailability, apiFetch, getAssetPath } from '@/lib/client-api';
 import PrintableDocumentModal from './PrintableDocumentModal';
 
 type AdminTab =
@@ -173,7 +173,7 @@ export default function AdminDashboard() {
   async function loadAllData() {
     try {
       setLoading(true);
-      const res = await fetch('/api/state');
+      const res = await apiFetch('/api/state');
       const data = await res.json();
       if (data.firebaseStatus) {
         setFirebaseStatus(data.firebaseStatus);
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
 
   async function loadCalendarMonth(month: string, inspectDate: string) {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/availability?month=${month}&startDate=${inspectDate}&endDate=${inspectDate}`
       );
       const data = await res.json();
@@ -224,7 +224,7 @@ export default function AdminDashboard() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoginError(null);
-    const res = await fetch('/api/auth', {
+    const res = await apiFetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: usernameInput, password: passwordInput }),
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
 
   // Booking status & payment updates
   async function updateBookingStatus(bookingId: string, status: BookingStatus) {
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch('/api/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bookingId, action: 'update_status', status }),
@@ -257,7 +257,7 @@ export default function AdminDashboard() {
   }
 
   async function updateBookingPaymentStatus(bookingId: string, paymentStatus: PaymentStatus) {
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch('/api/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bookingId, action: 'update_payment_status', paymentStatus }),
@@ -271,7 +271,7 @@ export default function AdminDashboard() {
   async function handleRescheduleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!rescheduleBooking) return;
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch('/api/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
   async function handleQuickSaveInventory(itemId: string) {
     const edits = quickEdits[itemId];
     if (!edits) return;
-    const res = await fetch('/api/inventory', {
+    const res = await apiFetch('/api/inventory', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!editingItem) return;
     const method = isNewItemModal ? 'POST' : 'PUT';
-    const res = await fetch('/api/inventory', {
+    const res = await apiFetch('/api/inventory', {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editingItem),
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
 
   async function handleDeleteItem(id: string, name: string) {
     if (!confirm(`Delete "${name}" from inventory?`)) return;
-    const res = await fetch(`/api/inventory?id=${encodeURIComponent(id)}`, {
+    const res = await apiFetch(`/api/inventory?id=${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
     if (res.ok) {
@@ -356,7 +356,7 @@ export default function AdminDashboard() {
   async function handleAddPayment(e: React.FormEvent) {
     e.preventDefault();
     if (!payBookingId || !payAmount) return;
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch('/api/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -380,7 +380,7 @@ export default function AdminDashboard() {
   }
 
   async function handleVerifyPayment(bookingId: string, paymentId: string) {
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch('/api/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -399,7 +399,7 @@ export default function AdminDashboard() {
   async function handleAddDamage(e: React.FormEvent) {
     e.preventDefault();
     if (!dmgBookingId) return;
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch('/api/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -421,7 +421,7 @@ export default function AdminDashboard() {
   }
 
   async function handleToggleDamageResolved(bookingId: string, damageId: string) {
-    const res = await fetch('/api/bookings', {
+    const res = await apiFetch('/api/bookings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -440,7 +440,7 @@ export default function AdminDashboard() {
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     if (!settings) return;
-    const res = await fetch('/api/settings', {
+    const res = await apiFetch('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings }),
@@ -459,7 +459,7 @@ export default function AdminDashboard() {
     }
     try {
       setSavingFirebase(true);
-      const res = await fetch('/api/settings', {
+      const res = await apiFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -600,7 +600,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
             <img
-              src="/logo.jpg"
+              src={getAssetPath('/logo.jpg')}
               alt="MMC Set n Seat Rentals Logo"
               className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-emerald-700 shadow-xl"
             />
@@ -706,7 +706,7 @@ export default function AdminDashboard() {
           <div className="p-5 border-b border-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img
-                src="/logo.jpg"
+                src={getAssetPath('/logo.jpg')}
                 alt="MMC Set n Seat Rentals"
                 className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shrink-0"
               />

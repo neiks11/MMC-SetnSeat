@@ -42,7 +42,7 @@ import {
   ReviewItem,
   BookingStatus,
 } from '@/lib/types';
-import { ItemAvailability } from '@/lib/db';
+import { ItemAvailability, apiFetch, getAssetPath } from '@/lib/client-api';
 import FloatingChatButton from './FloatingChatButton';
 import PrintableDocumentModal from './PrintableDocumentModal';
 
@@ -164,7 +164,7 @@ export default function CustomerApp() {
   async function fetchState(start: string, end: string) {
     try {
       setLoading(true);
-      const res = await fetch(`/api/state?startDate=${start}&endDate=${end}`);
+      const res = await apiFetch(`/api/state?startDate=${start}&endDate=${end}`);
       const data = await res.json();
       setSettings(data.settings);
       setInventory(data.inventory || []);
@@ -185,7 +185,7 @@ export default function CustomerApp() {
     try {
       setCheckingStock(true);
       const effEnd = end >= start ? end : start;
-      const res = await fetch(`/api/availability?startDate=${start}&endDate=${effEnd}`);
+      const res = await apiFetch(`/api/availability?startDate=${start}&endDate=${effEnd}`);
       const data = await res.json();
       if (data.availability) {
         setAvailability(data.availability);
@@ -332,7 +332,7 @@ export default function CustomerApp() {
 
     try {
       setSubmitting(true);
-      const res = await fetch('/api/bookings', {
+      const res = await apiFetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -387,7 +387,7 @@ export default function CustomerApp() {
     if (!refToFind) return;
     setTrackError(null);
     try {
-      const res = await fetch(`/api/state?ref=${encodeURIComponent(refToFind)}`);
+      const res = await apiFetch(`/api/state?ref=${encodeURIComponent(refToFind)}`);
       const data = await res.json();
       if (!data.booking) {
         setTrackedBooking(null);
@@ -406,7 +406,7 @@ export default function CustomerApp() {
     if (!trackedBooking) return;
     try {
       setUploadingProof(true);
-      const res = await fetch('/api/bookings', {
+      const res = await apiFetch('/api/bookings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -437,7 +437,7 @@ export default function CustomerApp() {
       <div className="min-h-screen flex items-center justify-center bg-warm-50">
         <div className="text-center space-y-3">
           <img
-            src="/logo.jpg"
+            src={getAssetPath('/logo.jpg')}
             alt="MMC Set n Seat Rentals Logo"
             className="w-20 h-20 rounded-full object-cover mx-auto shadow-lg border-2 border-emerald-700 animate-pulse"
           />
@@ -512,7 +512,7 @@ export default function CustomerApp() {
             className="flex items-center gap-3 text-left group"
           >
             <img
-              src="/logo.jpg"
+              src={getAssetPath('/logo.jpg')}
               alt="MMC Set n Seat Rentals Logo"
               className="w-12 h-12 rounded-full object-cover border-2 border-emerald-700 shadow-md group-hover:scale-105 transition"
             />
@@ -637,7 +637,7 @@ export default function CustomerApp() {
                 <div className="lg:col-span-7 space-y-6">
                   <div className="flex items-center gap-4">
                     <img
-                      src="/logo.jpg"
+                      src={getAssetPath('/logo.jpg')}
                       alt="Set N Seat Rentals Official Logo"
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-amber-300/80 shadow-2xl shrink-0"
                     />
@@ -2511,7 +2511,7 @@ export default function CustomerApp() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <img
-                src="/logo.jpg"
+                src={getAssetPath('/logo.jpg')}
                 alt="MMC Set n Seat Rentals"
                 className="w-12 h-12 rounded-full object-cover border-2 border-amber-400"
               />

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Printer, X, CheckCircle2, MapPin, Phone, Mail } from 'lucide-react';
 import { Booking, BusinessSettings } from '@/lib/types';
+import { getAssetPath } from '@/lib/client-api';
 
 interface PrintableDocumentModalProps {
   booking: Booking;
@@ -90,7 +91,7 @@ export default function PrintableDocumentModal({
           <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-emerald-800 pb-5 gap-4">
             <div className="flex items-start gap-4">
               <img
-                src="/logo.jpg"
+                src={getAssetPath('/logo.jpg')}
                 alt="MMC Set n Seat Rentals Logo"
                 className="w-16 h-16 rounded-full object-cover border-2 border-emerald-800 shrink-0"
               />
