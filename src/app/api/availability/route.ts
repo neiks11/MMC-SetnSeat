@@ -1,42 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailabilityForDateRange, readDb } from '@/lib/db';
+import { enforceRateLimit, sanitizeText, verifyAdminRequest } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const startDate = searchParams.get('startDate') || new Date().toISOString().slice(0, 10);
-  const endDate = searchParams.get('endDate') || startDate;
-  const month = searchParams.get('month'); // Optional YYYY-MM for calendar view
+  const rateLimited = enforceRateLimit(req, 'availability_get', 60, 60 * 1000);
+  if (rateLimited) return rateLimited;
 
+  const { searchParams } = new URL(req.url);
+  const startDate = sanitizeText(
+    searchParams.get('startDate') || new Date().toISOString().slice(0, 10),
+    10
+  );
+  const endDate = sanitizeText(searchParams.get('endDate') || startDate, 10);
+  const month = searchParams.get('month');
+
+  const adminSession = verifyAdminRequest(req);
   const db = await readDb();
   const availability = await getAvailabilityForDateRange(startDate, endDate, undefined, db);
 
-  if (month) {
-    // Compute daily booking counts and stock utilization for the requested month
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
     const [yearStr, monthStr] = month.split('-');
     const year = parseInt(yearStr, 10);
     const m = parseInt(monthStr, 10);
     const daysInMonth = new Date(year, m, 0).getDate();
 
-    const calendarDays: Record<
-      string,
-      {
-        date: string;
-        bookingsCount: number;
-        bookings: {
-          id: string;
-          referenceNumber: string;
-          customerName: string;
-          eventType: string;
-          status: string;
-          municipality: string;
-          totalAmount: number;
-        }[];
-        chairsBooked: number;
-        tablesBooked: number;
-      }
-    > = {};
+    const calendarDays: Record<string, any> = {};
 
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${yearStr}-${monthStr}-${String(d).padStart(2, '0')}`;
@@ -61,15 +51,18 @@ export async function GET(req: NextRequest) {
       calendarDays[dateStr] = {
         date: dateStr,
         bookingsCount: dayBookings.length,
-        bookings: dayBookings.map((b) => ({
-          id: b.id,
-          referenceNumber: b.referenceNumber,
-          customerName: b.customerName,
-          eventType: b.eventType,
-          status: b.status,
-          municipality: b.municipality,
-          totalAmount: b.totalAmount,
-        })),
+        // Only expose customer booking details to authenticated admins
+        bookings: adminSession
+          ? dayBookings.map((b) => ({
+              id: b.id,
+              referenceNumber: b.referenceNumber,
+              customerName: b.customerName,
+              eventType: b.eventType,
+              status: b.status,
+              municipality: b.municipality,
+              totalAmount: b.totalAmount,
+            }))
+          : [],
         chairsBooked,
         tablesBooked,
       };

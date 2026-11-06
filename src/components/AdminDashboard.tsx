@@ -80,8 +80,8 @@ function getTodayStr(): string {
 export default function AdminDashboard() {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [usernameInput, setUsernameInput] = useState('admin');
-  const [passwordInput, setPasswordInput] = useState('password123');
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Active navigation tab
@@ -234,11 +234,22 @@ export default function AdminDashboard() {
       setLoginError(data.error || 'Login failed');
       return;
     }
+    if (data.token) {
+      sessionStorage.setItem('mmc_admin_token', data.token);
+    }
     sessionStorage.setItem('mmc_admin_auth', 'true');
+    setPasswordInput('');
     setIsAuthenticated(true);
+    await loadAllData();
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await apiFetch('/api/auth', { method: 'DELETE' });
+    } catch {
+      // ignore network error on logout
+    }
+    sessionStorage.removeItem('mmc_admin_token');
     sessionStorage.removeItem('mmc_admin_auth');
     setIsAuthenticated(false);
   }

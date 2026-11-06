@@ -30,17 +30,6 @@ export interface FirebaseConfigData {
   measurementId?: string;
 }
 
-export const DEFAULT_FIREBASE_CONFIG: FirebaseConfigData = {
-  apiKey: 'AIzaSyBON-Jjt0-p10vBR0DhO3Zg9Ue6rnI2T9k',
-  authDomain: 'mmcsetandseat.firebaseapp.com',
-  databaseURL: 'https://mmcsetandseat-default-rtdb.firebaseio.com',
-  projectId: 'mmcsetandseat',
-  storageBucket: 'mmcsetandseat.firebasestorage.app',
-  messagingSenderId: '401059693863',
-  appId: '1:401059693863:web:d575ab3db44106bd521502',
-  measurementId: 'G-RC7BLP8FG3',
-};
-
 const DATA_DIR = path.join(process.cwd(), 'data');
 const FB_CONFIG_FILE = path.join(DATA_DIR, 'firebase-config.json');
 
@@ -48,12 +37,20 @@ const FB_CONFIG_FILE = path.join(DATA_DIR, 'firebase-config.json');
  * Normalizes data returned from Firebase Realtime Database or Firestore
  * (since Realtime Database strips empty arrays `[]` when storing objects).
  */
-export function normalizeDatabaseSchema(raw: Partial<DatabaseSchema> | null | undefined, fallback: DatabaseSchema): DatabaseSchema {
+export function normalizeDatabaseSchema(
+  raw: Partial<DatabaseSchema> | null | undefined,
+  fallback: DatabaseSchema
+): DatabaseSchema {
   if (!raw || typeof raw !== 'object') return fallback;
   return {
     settings: {
       ...fallback.settings,
       ...(raw.settings || {}),
+      // Never overwrite local adminPassword hash with a redacted placeholder
+      adminPassword:
+        raw.settings?.adminPassword && raw.settings.adminPassword !== '***'
+          ? raw.settings.adminPassword
+          : fallback.settings.adminPassword,
       deliveryZones: Array.isArray(raw.settings?.deliveryZones)
         ? raw.settings!.deliveryZones
         : fallback.settings.deliveryZones,
@@ -75,15 +72,21 @@ export function normalizeDatabaseSchema(raw: Partial<DatabaseSchema> | null | un
     notifications: Array.isArray(raw.notifications) ? raw.notifications : [],
     gallery: Array.isArray(raw.gallery) ? raw.gallery : fallback.gallery,
     reviews: Array.isArray(raw.reviews) ? raw.reviews : fallback.reviews,
+    auditLogs: Array.isArray(raw.auditLogs) ? raw.auditLogs : [],
   };
 }
 
+/**
+ * Reads Firebase configuration strictly from environment variables or the gitignored
+ * server-side `data/firebase-config.json` file (no hardcoded keys in source control).
+ */
 export function getActiveFirebaseConfig(): FirebaseConfigData | null {
   // 1. Check environment variables first
   if (
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'your_api_key_here'
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'your_api_key_here' &&
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'your_firebase_web_api_key_here'
   ) {
     return {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -92,7 +95,7 @@ export function getActiveFirebaseConfig(): FirebaseConfigData | null {
         `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
       databaseURL:
         process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
-        DEFAULT_FIREBASE_CONFIG.databaseURL,
+        `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`,
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
       storageBucket:
         process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
@@ -103,24 +106,20 @@ export function getActiveFirebaseConfig(): FirebaseConfigData | null {
     };
   }
 
-  // 2. Check runtime config saved via Admin Dashboard
+  // 2. Check gitignored runtime config (`data/firebase-config.json`)
   try {
     if (fs.existsSync(FB_CONFIG_FILE)) {
       const raw = fs.readFileSync(FB_CONFIG_FILE, 'utf-8');
       const parsed = JSON.parse(raw) as FirebaseConfigData;
       if (parsed.apiKey && parsed.projectId) {
-        return {
-          ...DEFAULT_FIREBASE_CONFIG,
-          ...parsed,
-        };
+        return parsed;
       }
     }
-  } catch (err) {
-    console.error('Error reading firebase-config.json:', err);
+  } catch {
+    // Do not log raw config errors to stdout in production
   }
 
-  // 3. Fall back to the configured mmcsetandseat Firebase project
-  return DEFAULT_FIREBASE_CONFIG;
+  return null;
 }
 
 export function saveRuntimeFirebaseConfig(config: FirebaseConfigData): void {
@@ -140,13 +139,16 @@ function getFirebaseAppInstance(): { app: FirebaseApp | null; config: FirebaseCo
     const existing = getApps().find((a) => a.name === appName);
     const app: FirebaseApp = existing || initializeApp(config, appName);
     return { app, config };
-  } catch (err) {
-    console.error('Failed to initialize Firebase App:', err);
+  } catch {
     return { app: null, config: null };
   }
 }
 
-export function getFirestoreDb(): { db: Firestore | null; rtdb: Database | null; projectId: string | null } {
+export function getFirestoreDb(): {
+  db: Firestore | null;
+  rtdb: Database | null;
+  projectId: string | null;
+} {
   const { app, config } = getFirebaseAppInstance();
   if (!app || !config) {
     return { db: null, rtdb: null, projectId: null };
@@ -159,27 +161,24 @@ export function getFirestoreDb(): { db: Firestore | null; rtdb: Database | null;
     if (config.databaseURL) {
       rtdb = getDatabase(app, config.databaseURL);
     }
-  } catch (err) {
-    console.error('Failed to initialize Firebase Realtime Database:', err);
+  } catch {
+    // ignore rtdb init error
   }
 
   try {
     db = getFirestore(app);
-  } catch (err) {
-    console.error('Failed to initialize Firebase Firestore:', err);
+  } catch {
+    // ignore firestore init error
   }
 
   return { db, rtdb, projectId: config.projectId };
 }
 
-/**
- * Reads the complete application state from Firebase Realtime Database (primary)
- * or Cloud Firestore (fallback), and automatically seeds the database on first connection.
- */
-export async function readFromFirestore(fallbackSeed: DatabaseSchema): Promise<DatabaseSchema | null> {
+export async function readFromFirestore(
+  fallbackSeed: DatabaseSchema
+): Promise<DatabaseSchema | null> {
   const { db, rtdb } = getFirestoreDb();
 
-  // 1. Try Firebase Realtime Database first (https://mmcsetandseat-default-rtdb.firebaseio.com)
   if (rtdb) {
     try {
       const snap = await dbGet(dbRef(rtdb, 'mmc_system/state_snapshot'));
@@ -189,12 +188,11 @@ export async function readFromFirestore(fallbackSeed: DatabaseSchema): Promise<D
         await writeToFirestore(fallbackSeed);
         return fallbackSeed;
       }
-    } catch (err) {
-      console.error('Realtime Database read error (checking Firestore/local fallback):', err);
+    } catch {
+      // Fall through to Firestore / local cache
     }
   }
 
-  // 2. Fallback to Cloud Firestore
   if (db) {
     try {
       const snapshotRef = doc(db, 'mmc_system', 'state_snapshot');
@@ -206,49 +204,52 @@ export async function readFromFirestore(fallbackSeed: DatabaseSchema): Promise<D
         await writeToFirestore(fallbackSeed);
         return fallbackSeed;
       }
-    } catch (err) {
-      console.error('Firestore read error (falling back to local cache):', err);
+    } catch {
+      // Fall through to local cache
     }
   }
 
   return null;
 }
 
-/**
- * Writes the state to Firebase Realtime Database and/or Cloud Firestore:
- * 1. Updates `mmc_system/state_snapshot` for atomic reads
- * 2. Syncs top-level nodes/collections (`settings`, `inventory`, `bookings`, `customers`, `damage_logs`)
- *    so the owner can inspect all live records in the Firebase Console.
- */
 export async function writeToFirestore(data: DatabaseSchema): Promise<boolean> {
   const { db, rtdb } = getFirestoreDb();
   const cleanData = JSON.parse(JSON.stringify(data)) as DatabaseSchema;
+  // Redact adminPassword from public settings node
+  const publicSettings = {
+    ...cleanData.settings,
+    adminPassword: '***',
+  };
   let synced = false;
 
-  // 1. Write to Firebase Realtime Database (`https://mmcsetandseat-default-rtdb.firebaseio.com`)
   if (rtdb) {
     try {
-      await dbSet(dbRef(rtdb, 'mmc_system/state_snapshot'), cleanData);
-      await dbSet(dbRef(rtdb, 'settings'), cleanData.settings);
+      await dbSet(dbRef(rtdb, 'mmc_system/state_snapshot'), {
+        ...cleanData,
+        settings: publicSettings,
+      });
+      await dbSet(dbRef(rtdb, 'settings'), publicSettings);
       await dbSet(dbRef(rtdb, 'inventory'), cleanData.inventory);
       await dbSet(dbRef(rtdb, 'bookings'), cleanData.bookings);
       await dbSet(dbRef(rtdb, 'customers'), cleanData.customers);
       await dbSet(dbRef(rtdb, 'damage_logs'), cleanData.damageLogs);
       synced = true;
-    } catch (err) {
-      console.error('Realtime Database write error:', err);
+    } catch {
+      // ignore RTDB write error
     }
   }
 
-  // 2. Also attempt Cloud Firestore sync if enabled
   if (db) {
     try {
       const snapshotRef = doc(db, 'mmc_system', 'state_snapshot');
-      await setDoc(snapshotRef, cleanData);
+      await setDoc(snapshotRef, {
+        ...cleanData,
+        settings: publicSettings,
+      });
 
       const batch = writeBatch(db);
       const settingsRef = doc(collection(db, 'settings'), 'default');
-      batch.set(settingsRef, cleanData.settings);
+      batch.set(settingsRef, publicSettings);
 
       for (const item of cleanData.inventory.slice(0, 50)) {
         batch.set(doc(collection(db, 'inventory'), item.id), item);
@@ -266,7 +267,7 @@ export async function writeToFirestore(data: DatabaseSchema): Promise<boolean> {
       await batch.commit();
       synced = true;
     } catch {
-      // Ignore if Firestore is not enabled on the project and only Realtime Database is used
+      // ignore Firestore write error
     }
   }
 

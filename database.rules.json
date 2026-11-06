@@ -1,0 +1,53 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "inventory": {
+      ".read": true,
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "settings": {
+      ".read": true,
+      ".write": "auth != null && auth.token.admin === true",
+      "adminPassword": {
+        ".read": false,
+        ".write": "auth != null && auth.token.admin === true"
+      }
+    },
+    "gallery": {
+      ".read": true,
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "reviews": {
+      ".read": true,
+      "$reviewId": {
+        ".write": "(!data.exists() && newData.hasChildren(['bookingReference', 'customerName', 'rating', 'comment'])) || (auth != null && auth.token.admin === true)",
+        ".validate": "newData.child('rating').isNumber() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5 && newData.child('comment').isString() && newData.child('comment').val().length >= 10 && newData.child('comment').val().length <= 800"
+      }
+    },
+    "bookings": {
+      ".read": "auth != null && auth.token.admin === true",
+      "$bookingId": {
+        ".read": "auth != null && (auth.token.admin === true || auth.uid === data.child('customerId').val())",
+        ".write": "(!data.exists() && newData.hasChildren(['referenceNumber', 'customerName', 'customerPhone', 'eventDate', 'totalAmount'])) || (auth != null && auth.token.admin === true)",
+        ".validate": "newData.child('customerName').isString() && newData.child('customerName').val().length >= 2 && newData.child('customerName').val().length <= 100 && newData.child('totalAmount').isNumber() && newData.child('totalAmount').val() >= 0"
+      }
+    },
+    "customers": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "damage_logs": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "notifications": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "mmc_system": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true"
+    }
+  }
+}

@@ -8,10 +8,20 @@
 /out/
 /build
 
-# Environment & Secret Keys
+# Environment & Secret Keys (never commit real secrets)
 .env
-.env*.local
-data/firebase-config.json
+.env.*
+!.env.example
+
+# Runtime local database & sensitive dumps
+/data/
+*.sqlite
+*.db
+*.sql
+*.bak
+*.zip
+*.tar.gz
+*.map
 
 # Debug & OS files
 npm-debug.log*
@@ -19,6 +29,6 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 *.pem
+*.key
 *.tsbuildinfo
 next-env.d.ts
-

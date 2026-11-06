@@ -47,19 +47,45 @@ export interface ClientFirebaseConfig {
   measurementId?: string;
 }
 
-export const DEFAULT_CLIENT_FIREBASE_CONFIG: ClientFirebaseConfig = {
-  apiKey: 'AIzaSyBON-Jjt0-p10vBR0DhO3Zg9Ue6rnI2T9k',
-  authDomain: 'mmcsetandseat.firebaseapp.com',
-  databaseURL: 'https://mmcsetandseat-default-rtdb.firebaseio.com',
-  projectId: 'mmcsetandseat',
-  storageBucket: 'mmcsetandseat.firebasestorage.app',
-  messagingSenderId: '401059693863',
-  appId: '1:401059693863:web:d575ab3db44106bd521502',
-  measurementId: 'G-RC7BLP8FG3',
-};
-
 const LOCAL_DB_KEY = 'mmc_setnseat_db_v2';
 const LOCAL_FB_CONFIG_KEY = 'mmc_setnseat_fb_config_v1';
+export const COOKIE_CONSENT_KEY = 'mmc_cookie_consent_v1';
+
+export interface CookieConsentPreferences {
+  essential: true;
+  analytics: boolean;
+  marketing: boolean;
+  consentedAt: string;
+  policyVersion: string;
+}
+
+export function getSavedCookieConsent(): CookieConsentPreferences | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(COOKIE_CONSENT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as CookieConsentPreferences;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCookieConsent(prefs: Omit<CookieConsentPreferences, 'essential' | 'consentedAt' | 'policyVersion'>): CookieConsentPreferences {
+  const full: CookieConsentPreferences = {
+    essential: true,
+    analytics: Boolean(prefs.analytics),
+    marketing: Boolean(prefs.marketing),
+    consentedAt: new Date().toISOString(),
+    policyVersion: '2026-11-RA10173',
+  };
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(full));
+    if (full.analytics) {
+      maybeInitAnalyticsAfterConsent();
+    }
+  }
+  return full;
+}
 
 /**
  * Resolves public asset paths (such as `/logo.jpg`) so they work both on
@@ -108,7 +134,8 @@ export function getClientFirebaseConfig(): ClientFirebaseConfig | null {
   if (
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'your_api_key_here'
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'your_api_key_here' &&
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'your_firebase_web_api_key_here'
   ) {
     return {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -117,7 +144,7 @@ export function getClientFirebaseConfig(): ClientFirebaseConfig | null {
         `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
       databaseURL:
         process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
-        DEFAULT_CLIENT_FIREBASE_CONFIG.databaseURL,
+        `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`,
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
       storageBucket:
         process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
@@ -134,17 +161,14 @@ export function getClientFirebaseConfig(): ClientFirebaseConfig | null {
       if (raw) {
         const parsed = JSON.parse(raw) as ClientFirebaseConfig;
         if (parsed.apiKey && parsed.projectId) {
-          return {
-            ...DEFAULT_CLIENT_FIREBASE_CONFIG,
-            ...parsed,
-          };
+          return parsed;
         }
       }
     } catch {
       // ignore storage errors
     }
   }
-  return DEFAULT_CLIENT_FIREBASE_CONFIG;
+  return null;
 }
 
 function saveClientFirebaseConfig(config: ClientFirebaseConfig): void {
@@ -154,6 +178,27 @@ function saveClientFirebaseConfig(config: ClientFirebaseConfig): void {
 }
 
 let analyticsInitialized = false;
+
+function maybeInitAnalyticsAfterConsent(): void {
+  if (typeof window === 'undefined' || analyticsInitialized) return;
+  const consent = getSavedCookieConsent();
+  if (!consent?.analytics) return; // Strictly block Analytics until explicit user consent
+  const config = getClientFirebaseConfig();
+  if (!config || !config.apiKey || !config.projectId || !config.measurementId) return;
+  try {
+    const appName = `mmc-client-fb-${config.projectId}`;
+    const existing = getApps().find((a) => a.name === appName);
+    const app: FirebaseApp = existing || initializeApp(config, appName);
+    analyticsInitialized = true;
+    isAnalyticsSupported()
+      .then((yes) => {
+        if (yes) getAnalytics(app);
+      })
+      .catch(() => {});
+  } catch {
+    // ignore analytics init error
+  }
+}
 
 function getClientFirestore(): {
   db: Firestore | null;
@@ -169,14 +214,8 @@ function getClientFirestore(): {
     const existing = getApps().find((a) => a.name === appName);
     const app: FirebaseApp = existing || initializeApp(config, appName);
 
-    if (typeof window !== 'undefined' && !analyticsInitialized && config.measurementId) {
-      analyticsInitialized = true;
-      isAnalyticsSupported()
-        .then((yes) => {
-          if (yes) getAnalytics(app);
-        })
-        .catch(() => {});
-    }
+    // Only initialize Google Analytics if user explicitly consented to analytics cookies
+    maybeInitAnalyticsAfterConsent();
 
     let rtdb: Database | null = null;
     let db: Firestore | null = null;
@@ -415,7 +454,18 @@ export async function apiFetch(input: string, init?: RequestInit): Promise<Respo
 
   if (!isStaticExport) {
     try {
-      const res = await fetch(input, init);
+      const headers = new Headers(init?.headers || {});
+      if (typeof window !== 'undefined') {
+        const savedToken = window.sessionStorage.getItem('mmc_admin_token');
+        if (savedToken && !headers.has('Authorization')) {
+          headers.set('Authorization', `Bearer ${savedToken}`);
+        }
+      }
+      const res = await fetch(input, {
+        ...init,
+        headers,
+        credentials: 'same-origin',
+      });
       if (res.status !== 404 && res.status !== 405) {
         return res;
       }
@@ -979,6 +1029,100 @@ export async function apiFetch(input: string, init?: RequestInit): Promise<Respo
       syncedToFirebase,
       settings: { ...db.settings, adminPassword: '***' },
     });
+  }
+
+  // 7. /api/reviews (Verified Booking Review Submission, Reporting & Moderation)
+  if (pathname.endsWith('/api/reviews')) {
+    const db = await readClientDb();
+    if (method === 'POST') {
+      if (body.websiteHoneypot && String(body.websiteHoneypot).trim() !== '') {
+        return makeJsonResponse({ error: 'Spam detected.' }, 400);
+      }
+      const refNum = String(body.bookingReference || '').trim().toUpperCase();
+      const phone = String(body.customerPhone || '').replace(/\D/g, '');
+      const comment = String(body.comment || '').replace(/[<>]/g, '').trim().slice(0, 800);
+      const rating = Math.min(5, Math.max(1, Math.round(Number(body.rating) || 5)));
+
+      const matched = db.bookings.find((b) => b.referenceNumber.toUpperCase() === refNum);
+      if (!matched) {
+        return makeJsonResponse(
+          { error: 'Booking reference not found. Only verified customers with a real booking can post a review.' },
+          400
+        );
+      }
+      if (!['Completed', 'Returned'].includes(matched.status)) {
+        return makeJsonResponse(
+          { error: `Reviews can only be submitted after your event is Completed or Returned (current status: ${matched.status}).` },
+          400
+        );
+      }
+      if (!phone || phone.length < 4 || !matched.customerPhone.replace(/\D/g, '').endsWith(phone.slice(-4))) {
+        return makeJsonResponse(
+          { error: 'Phone verification failed. Please enter the phone number used on your booking.' },
+          403
+        );
+      }
+      if (db.reviews.some((r) => r.bookingReference && r.bookingReference.toUpperCase() === refNum)) {
+        return makeJsonResponse({ error: 'A review has already been submitted for this booking.' }, 409);
+      }
+      if (comment.length < 10) {
+        return makeJsonResponse({ error: 'Please write at least 10 characters.' }, 400);
+      }
+
+      const flags: string[] = [];
+      if (db.reviews.some((r) => r.comment.toLowerCase().trim() === comment.toLowerCase())) {
+        flags.push('DUPLICATE_TEXT');
+      }
+      if (/(https?:\/\/|www\.|\.com\/|bit\.ly|casino|bet88)/i.test(comment)) {
+        flags.push('LINK_OR_PROMO_CONTENT');
+      }
+      if (/\b(putangina|gago|tarantado|ulol|bobo|scammer|fuck|shit)\b/i.test(comment)) {
+        flags.push('PROFANITY_DETECTED');
+      }
+
+      const newReview = {
+        id: `rev-${Date.now()}`,
+        bookingReference: refNum,
+        verifiedBooking: true,
+        customerName: matched.customerName,
+        eventType: matched.eventType,
+        location: `${matched.barangay ? `Brgy. ${matched.barangay}, ` : ''}${matched.municipality}`,
+        rating,
+        comment,
+        date: new Date().toISOString().slice(0, 10),
+        status: (flags.length > 0 ? 'pending' : 'approved') as 'pending' | 'approved',
+        flags,
+        reportCount: 0,
+      };
+      db.reviews.unshift(newReview);
+      await writeClientDb(db);
+      return makeJsonResponse({
+        success: true,
+        review: newReview,
+        heldForModeration: newReview.status === 'pending',
+        reviews: db.reviews,
+      });
+    }
+
+    if (method === 'PATCH') {
+      const target = db.reviews.find((r) => r.id === body.reviewId);
+      if (!target) return makeJsonResponse({ error: 'Review not found' }, 404);
+      if (body.action === 'report') {
+        target.reportCount = (target.reportCount || 0) + 1;
+        if (target.reportCount >= 3 && target.status === 'approved') {
+          target.status = 'pending';
+          target.flags = Array.from(new Set([...(target.flags || []), 'USER_REPORTED']));
+        }
+      } else if (body.action === 'moderate') {
+        target.status = body.status;
+        target.moderationReason = String(body.reason || '').slice(0, 200);
+      } else if (body.action === 'owner_reply') {
+        target.ownerResponse = String(body.ownerResponse || '').replace(/[<>]/g, '').trim().slice(0, 500);
+        target.ownerResponseDate = new Date().toISOString().slice(0, 10);
+      }
+      await writeClientDb(db);
+      return makeJsonResponse({ success: true, review: target, reviews: db.reviews });
+    }
   }
 
   return makeJsonResponse({ error: 'Endpoint not found' }, 404);

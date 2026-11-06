@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Calendar,
   MapPin,
@@ -46,6 +47,7 @@ import {
 import { ItemAvailability, apiFetch, getAssetPath } from '@/lib/client-api';
 import FloatingChatButton from './FloatingChatButton';
 import PrintableDocumentModal from './PrintableDocumentModal';
+import CookieConsentBanner from './CookieConsentBanner';
 
 type CustomerTab =
   | 'home'
@@ -219,6 +221,20 @@ export default function CustomerApp() {
   const [humanCheckAnswer, setHumanCheckAnswer] = useState('');
   const [paymentReferenceNo, setPaymentReferenceNo] = useState('');
   const [proofImageUrl, setProofImageUrl] = useState<string>('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
+
+  // Verified Review Submission state (Section G)
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [revBookingRef, setRevBookingRef] = useState('');
+  const [revPhone, setRevPhone] = useState('');
+  const [revRating, setRevRating] = useState(5);
+  const [revComment, setRevComment] = useState('');
+  const [revHoneypot, setRevHoneypot] = useState('');
+  const [revConsent, setRevConsent] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [revStatusMsg, setRevStatusMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(
+    null
+  );
 
   // Submission & Confirmation state
   const [submitting, setSubmitting] = useState(false);
@@ -459,8 +475,16 @@ export default function CustomerApp() {
       return;
     }
 
+    if (!consentAccepted) {
+      setFormError(
+        'Please review and check the Privacy Policy (RA 10173) and Rental Terms consent box before submitting.'
+      );
+      return;
+    }
+
     try {
       setSubmitting(true);
+      const consentTimestamp = new Date().toISOString();
       const res = await apiFetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -483,6 +507,8 @@ export default function CustomerApp() {
           websiteHoneypot,
           paymentReferenceNo,
           proofImageUrl,
+          consentAccepted: true,
+          consentTimestamp,
           items: cartItemsDetailed.map((c) => ({
             itemId: c.item.id,
             quantity: c.quantity,
@@ -529,6 +555,71 @@ export default function CustomerApp() {
       }
     } catch {
       setTrackError('Error looking up booking.');
+    }
+  }
+
+  // Section G: Submit a verified customer review
+  async function handleSubmitVerifiedReview(e: React.FormEvent) {
+    e.preventDefault();
+    setRevStatusMsg(null);
+    if (!revConsent) {
+      setRevStatusMsg({
+        type: 'err',
+        text: 'Please check the box agreeing to our Review Guidelines and Privacy Policy.',
+      });
+      return;
+    }
+    try {
+      setSubmittingReview(true);
+      const res = await apiFetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingReference: revBookingRef,
+          customerPhone: revPhone,
+          rating: revRating,
+          comment: revComment,
+          websiteHoneypot: revHoneypot,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRevStatusMsg({ type: 'err', text: data.error || 'Could not submit review.' });
+        return;
+      }
+      if (data.heldForModeration) {
+        setRevStatusMsg({
+          type: 'ok',
+          text: 'Thank you! Your verified review has been received and placed in our moderation queue for human review.',
+        });
+      } else {
+        setRevStatusMsg({
+          type: 'ok',
+          text: 'Thank you! Your Verified Booking review has been published.',
+        });
+        if (data.reviews) setReviews(data.reviews);
+      }
+      setRevBookingRef('');
+      setRevPhone('');
+      setRevComment('');
+      setRevConsent(false);
+    } catch {
+      setRevStatusMsg({ type: 'err', text: 'Network error while submitting review.' });
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
+  async function handleReportReview(reviewId: string) {
+    try {
+      await apiFetch('/api/reviews', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewId, action: 'report' }),
+      });
+      alert('Thank you. This review has been flagged for moderation review under our Review Guidelines.');
+    } catch {
+      // ignore report error
     }
   }
 
@@ -1594,6 +1685,200 @@ export default function CustomerApp() {
                     </div>
                   ))}
                 </div>
+
+                {/* Live Verified Booking Reviews + "Write a Verified Review" Form (Section G) */}
+                <div className="mt-8 pt-6 border-t border-gray-200 space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-heading font-bold text-lg text-gray-900">
+                        Verified Booking Reviews ({reviews.length})
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-600">
+                        Only customers with a completed booking reference can post. Honest negative feedback is never suppressed.{' '}
+                        <Link
+                          href={getAssetPath('/terms#review-guidelines')}
+                          className="underline text-[#7B2D26] font-semibold"
+                        >
+                          Read Review Guidelines
+                        </Link>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#7B2D26] hover:bg-[#5E201A] text-white font-bold text-xs sm:text-sm transition"
+                    >
+                      {showReviewForm ? 'Close Review Form' : 'Write a Verified Review'}
+                    </button>
+                  </div>
+
+                  {showReviewForm && (
+                    <form
+                      onSubmit={handleSubmitVerifiedReview}
+                      className="p-5 rounded-2xl bg-[#FAF8F5] border border-gray-200 space-y-4"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Completed Booking Ref # *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g., MMC-2026-1001"
+                            value={revBookingRef}
+                            onChange={(e) => setRevBookingRef(e.target.value)}
+                            className="w-full min-h-[44px] rounded-xl border border-gray-300 px-3 py-2 text-base uppercase font-semibold bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Booking Mobile Number *
+                          </label>
+                          <input
+                            type="tel"
+                            inputMode="tel"
+                            required
+                            placeholder="0917 812 3409"
+                            value={revPhone}
+                            onChange={(e) => setRevPhone(e.target.value)}
+                            className="w-full min-h-[44px] rounded-xl border border-gray-300 px-3 py-2 text-base bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">
+                            Star Rating (1–5) *
+                          </label>
+                          <select
+                            value={revRating}
+                            onChange={(e) => setRevRating(Number(e.target.value))}
+                            className="w-full min-h-[44px] rounded-xl border border-gray-300 px-3 py-2 text-base font-bold bg-white"
+                          >
+                            <option value={5}>★★★★★ (5/5 — Excellent)</option>
+                            <option value={4}>★★★★☆ (4/5 — Good)</option>
+                            <option value={3}>★★★☆☆ (3/5 — Fair)</option>
+                            <option value={2}>★★☆☆☆ (2/5 — Below Expectations)</option>
+                            <option value={1}>★☆☆☆☆ (1/5 — Poor)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Your Honest Review *
+                        </label>
+                        <textarea
+                          rows={3}
+                          required
+                          maxLength={800}
+                          placeholder="Share how our chairs, tables, tent setup, or delivery worked for your event..."
+                          value={revComment}
+                          onChange={(e) => setRevComment(e.target.value)}
+                          className="w-full rounded-xl border border-gray-300 px-3 py-2 text-base bg-white"
+                        />
+                      </div>
+
+                      <input
+                        type="text"
+                        name="revHoneypot"
+                        value={revHoneypot}
+                        onChange={(e) => setRevHoneypot(e.target.value)}
+                        className="hidden"
+                        tabIndex={-1}
+                        autoComplete="off"
+                      />
+
+                      <label className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={revConsent}
+                          onChange={(e) => setRevConsent(e.target.checked)}
+                          className="mt-1 w-4 h-4 accent-[#7B2D26] shrink-0"
+                        />
+                        <span>
+                          I confirm that I am a genuine customer for this booking and agree to publish my review under the{' '}
+                          <Link
+                            href={getAssetPath('/terms#review-guidelines')}
+                            className="underline text-[#7B2D26] font-semibold"
+                          >
+                            Review Guidelines
+                          </Link>{' '}
+                          and{' '}
+                          <Link
+                            href={getAssetPath('/privacy')}
+                            className="underline text-[#7B2D26] font-semibold"
+                          >
+                            Privacy Policy
+                          </Link>
+                          .
+                        </span>
+                      </label>
+
+                      {revStatusMsg && (
+                        <div
+                          className={`p-3 rounded-xl text-xs sm:text-sm font-semibold ${
+                            revStatusMsg.type === 'ok'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}
+                        >
+                          {revStatusMsg.text}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={submittingReview}
+                        className="min-h-[44px] px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-charcoal-900 font-extrabold text-xs sm:text-sm transition shadow"
+                      >
+                        {submittingReview ? 'Verifying Booking...' : 'Submit Verified Review'}
+                      </button>
+                    </form>
+                  )}
+
+                  {reviews.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {reviews.slice(0, 4).map((r) => (
+                        <div
+                          key={r.id}
+                          className="p-4 rounded-xl bg-[#FAF8F5] border border-gray-200 flex flex-col justify-between gap-3"
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex text-amber-400">
+                                  {[...Array(r.rating || 5)].map((_, i) => (
+                                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                  ))}
+                                </div>
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Verified Booking
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleReportReview(r.id)}
+                                className="text-xs text-gray-400 hover:text-red-700 underline"
+                              >
+                                Report
+                              </button>
+                            </div>
+                            <p className="text-sm text-gray-800 leading-relaxed">&ldquo;{r.comment}&rdquo;</p>
+                            {r.ownerResponse && (
+                              <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-gray-800">
+                                <strong className="text-[#7B2D26]">Owner Response:</strong> {r.ownerResponse}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-600 font-semibold">
+                            {r.customerName} • {r.eventType} ({r.location})
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 
@@ -2431,6 +2716,44 @@ export default function CustomerApp() {
                         className="w-24 min-h-[48px] rounded-xl border border-gray-300 px-3 py-2 text-base font-bold text-center bg-white"
                       />
                     </div>
+
+                    {/* Section H.26: Unchecked Consent Checkbox with Privacy Policy (RA 10173), Terms & Cookie links */}
+                    <label className="flex items-start gap-3 p-3.5 rounded-xl bg-[#FAF8F5] border border-gray-200 text-xs sm:text-sm text-gray-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        required
+                        checked={consentAccepted}
+                        onChange={(e) => setConsentAccepted(e.target.checked)}
+                        className="mt-1 w-5 h-5 accent-[#7B2D26] shrink-0"
+                      />
+                      <span>
+                        I have read and agree to the{' '}
+                        <Link
+                          href={getAssetPath('/terms')}
+                          target="_blank"
+                          className="underline font-bold text-[#7B2D26]"
+                        >
+                          Rental Terms & Conditions
+                        </Link>{' '}
+                        (including the {settings.depositPercent}% deposit, cancellation, and damage/replacement policies) and consent to the processing of my personal data under the{' '}
+                        <Link
+                          href={getAssetPath('/privacy')}
+                          target="_blank"
+                          className="underline font-bold text-[#7B2D26]"
+                        >
+                          Privacy Policy (RA 10173)
+                        </Link>{' '}
+                        and{' '}
+                        <Link
+                          href={getAssetPath('/cookies')}
+                          target="_blank"
+                          className="underline font-bold text-[#7B2D26]"
+                        >
+                          Cookie Policy
+                        </Link>
+                        . *
+                      </span>
+                    </label>
                   </div>
 
                   <button
@@ -2935,7 +3258,37 @@ export default function CustomerApp() {
             <div className="text-gray-400">Open Daily: 7:00 AM – 8:00 PM</div>
           </div>
         </div>
+
+        {/* Legal & Data Privacy Compliance Links (RA 10173, Cookie Policy, Rental Terms) */}
+        <div className="layout-container mt-8 pt-6 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+          <div>
+            © {new Date().getFullYear()} {settings.businessName}. All rights reserved.
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href={getAssetPath('/privacy')}
+              className="min-h-[44px] inline-flex items-center hover:text-amber-300 underline"
+            >
+              Privacy Policy (RA 10173)
+            </Link>
+            <Link
+              href={getAssetPath('/cookies')}
+              className="min-h-[44px] inline-flex items-center hover:text-amber-300 underline"
+            >
+              Cookie Policy & Preferences
+            </Link>
+            <Link
+              href={getAssetPath('/terms')}
+              className="min-h-[44px] inline-flex items-center hover:text-amber-300 underline"
+            >
+              Terms & Conditions
+            </Link>
+          </div>
+        </div>
       </footer>
+
+      {/* Cookie Consent Banner (blocks non-essential scripts until opt-in) */}
+      <CookieConsentBanner />
 
       {/* =====================================================================
           MOBILE FIX #3: STICKY BOTTOM BAR ON MOBILE (APPEARS ONCE ITEMS ARE ADDED)

@@ -7,15 +7,34 @@ import {
   generateReferenceNumber,
 } from '@/lib/db';
 import { Booking, BookingItemLine, BookingStatus, PaymentStatus } from '@/lib/types';
+import {
+  appendAuditLog,
+  enforceRateLimit,
+  getClientIp,
+  isValidIsoDate,
+  isValidSafeImageUrl,
+  sanitizeText,
+  validateBookingPayload,
+  verifyAdminRequest,
+} from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimited = enforceRateLimit(req, 'bookings_create', 10, 15 * 60 * 1000);
+    if (rateLimited) return rateLimited;
+
     const body = await req.json();
 
-    // 1. Basic spam protection (honeypot field)
+    // 1. Honeypot check
     if (body.websiteHoneypot && String(body.websiteHoneypot).trim() !== '') {
+      return NextResponse.json({ error: 'Spam detected.' }, { status: 400 });
+    }
+
+    // 2. Strict allow-list input validation
+    const validation = validateBookingPayload(body);
+    if (!validation.valid || !validation.sanitized) {
       return NextResponse.json(
-        { error: 'Spam detected.' },
+        { error: validation.error || 'Invalid booking details.' },
         { status: 400 }
       );
     }
@@ -26,7 +45,7 @@ export async function POST(req: NextRequest) {
       customerEmail,
       eventType,
       eventDate,
-      returnDate,
+      returnDate: effectiveReturnDate,
       eventTime,
       municipality,
       barangay,
@@ -36,32 +55,27 @@ export async function POST(req: NextRequest) {
       paymentMethod,
       discountCode,
       notes,
-      items, // [{ itemId, quantity }]
+      items,
       proofImageUrl,
       paymentReferenceNo,
-    } = body;
+      consentTimestamp,
+    } = validation.sanitized;
 
-    if (!customerName || !customerPhone || !eventDate || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json(
-        { error: 'Please complete all required customer details, event date, and select at least one rental item.' },
-        { status: 400 }
-      );
-    }
-
-    const effectiveReturnDate = returnDate && returnDate >= eventDate ? returnDate : eventDate;
     const rentalDays = calculateRentalDays(eventDate, effectiveReturnDate);
-
     const db = await readDb();
-    const availability = await getAvailabilityForDateRange(eventDate, effectiveReturnDate, undefined, db);
+    const availability = await getAvailabilityForDateRange(
+      eventDate,
+      effectiveReturnDate,
+      undefined,
+      db
+    );
 
-    // 2. Server-side stock check (prevents double-booking)
+    // 3. Server-side stock check & server-authoritative pricing (never trust client price)
     const bookingLines: BookingItemLine[] = [];
     let subtotal = 0;
 
     for (const reqItem of items) {
-      const qty = Number(reqItem.quantity);
-      if (!qty || qty <= 0) continue;
-
+      const qty = reqItem.quantity;
       const invItem = db.inventory.find((i) => i.id === reqItem.itemId);
       if (!invItem || !invItem.active) {
         return NextResponse.json(
@@ -74,7 +88,9 @@ export async function POST(req: NextRequest) {
       if (!avail || qty > avail.remainingStock) {
         return NextResponse.json(
           {
-            error: `Insufficient stock for "${invItem.name}" on ${eventDate}. Only ${avail ? avail.remainingStock : 0} left for those dates.`,
+            error: `Insufficient stock for "${invItem.name}" on ${eventDate}. Only ${
+              avail ? avail.remainingStock : 0
+            } left for those dates.`,
           },
           { status: 409 }
         );
@@ -94,17 +110,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (bookingLines.length === 0) {
-      return NextResponse.json(
-        { error: 'Please select at least one valid item with quantity > 0.' },
-        { status: 400 }
-      );
-    }
-
-    // 3. Compute delivery fee, setup fee, discount, total, and required deposit
+    // 4. Server-authoritative fees & discounts
     let deliveryFee = 0;
     if (fulfillmentType === 'Delivery') {
-      if (subtotal >= db.settings.freeDeliveryMinOrder && db.settings.freeDeliveryMinOrder > 0) {
+      if (
+        subtotal >= db.settings.freeDeliveryMinOrder &&
+        db.settings.freeDeliveryMinOrder > 0
+      ) {
         deliveryFee = 0;
       } else {
         const zone = db.settings.deliveryZones.find((z) => z.municipality === municipality);
@@ -118,7 +130,7 @@ export async function POST(req: NextRequest) {
     let appliedCode: string | undefined = undefined;
     if (discountCode) {
       const foundPromo = db.settings.promoCodes.find(
-        (p) => p.active && p.code.toUpperCase() === String(discountCode).trim().toUpperCase()
+        (p) => p.active && p.code.toUpperCase() === discountCode.toUpperCase()
       );
       if (foundPromo) {
         discountAmount = Math.round(subtotal * (foundPromo.discountPercent / 100));
@@ -129,23 +141,23 @@ export async function POST(req: NextRequest) {
     const totalAmount = Math.max(0, subtotal + deliveryFee + setupFee - discountAmount);
     const depositRequired = Math.round(totalAmount * (db.settings.depositPercent / 100));
 
-    // 4. Find or create customer
-    const normalizedPhone = String(customerPhone).trim();
+    // 5. Find or create customer record
+    const normalizedPhone = customerPhone.trim();
     let customer = db.customers.find(
       (c) =>
         c.phone.replace(/\s+/g, '') === normalizedPhone.replace(/\s+/g, '') ||
-        (customerEmail && c.email.toLowerCase() === String(customerEmail).toLowerCase())
+        (customerEmail && c.email.toLowerCase() === customerEmail.toLowerCase())
     );
 
     const nowIso = new Date().toISOString().slice(0, 10);
     if (!customer) {
       customer = {
         id: `cust-${Date.now()}`,
-        name: customerName.trim(),
+        name: customerName,
         phone: normalizedPhone,
-        email: (customerEmail || '').trim(),
-        municipality: municipality || 'Lemery (Proper / Poblacion)',
-        address: `${barangay ? `Brgy. ${barangay}, ` : ''}${venueAddress || ''}, ${municipality || 'Batangas'}`,
+        email: customerEmail,
+        municipality,
+        address: `${barangay ? `Brgy. ${barangay}, ` : ''}${venueAddress}, ${municipality}`,
         totalBookings: 1,
         totalSpent: totalAmount,
         lastEventDate: eventDate,
@@ -168,9 +180,9 @@ export async function POST(req: NextRequest) {
         bookingId,
         amount: depositRequired,
         type: 'Deposit' as const,
-        method: (paymentMethod || 'GCash') as 'Cash' | 'GCash' | 'Maya' | 'Bank Transfer',
+        method: paymentMethod,
         referenceNo: paymentReferenceNo || 'Uploaded with booking',
-        proofImageUrl: proofImageUrl || undefined,
+        proofImageUrl,
         verifiedByAdmin: false,
         createdAt: nowIso,
       });
@@ -180,22 +192,22 @@ export async function POST(req: NextRequest) {
       id: bookingId,
       referenceNumber,
       customerId: customer.id,
-      customerName: customerName.trim(),
+      customerName,
       customerPhone: normalizedPhone,
-      customerEmail: (customerEmail || '').trim(),
-      eventType: eventType || 'Birthday',
+      customerEmail,
+      eventType,
       eventDate,
       returnDate: effectiveReturnDate,
       rentalDays,
-      eventTime: eventTime || '08:00 AM',
-      municipality: municipality || 'Lemery (Proper / Poblacion)',
-      barangay: barangay || '',
-      venueAddress: venueAddress || '',
-      fulfillmentType: fulfillmentType || 'Delivery',
-      includeSetup: Boolean(includeSetup),
+      eventTime,
+      municipality,
+      barangay,
+      venueAddress,
+      fulfillmentType,
+      includeSetup,
       status: 'Pending',
       paymentStatus: 'Unpaid',
-      paymentMethod: paymentMethod || 'GCash',
+      paymentMethod,
       subtotal,
       deliveryFee,
       setupFee,
@@ -206,8 +218,11 @@ export async function POST(req: NextRequest) {
       depositRequired,
       amountPaid: 0,
       balanceDue: totalAmount,
-      notes: notes || '',
+      notes,
       adminNotes: '',
+      consentTimestamp,
+      privacyPolicyVersion: '2026-11-RA10173',
+      termsVersion: '2026-11',
       createdAt: nowIso,
       updatedAt: nowIso,
       items: bookingLines,
@@ -217,7 +232,6 @@ export async function POST(req: NextRequest) {
 
     db.bookings.unshift(newBooking);
 
-    // 5. Add owner notification alert
     db.notifications.unshift({
       id: `notif-${Date.now()}`,
       type: 'NEW_BOOKING',
@@ -226,6 +240,15 @@ export async function POST(req: NextRequest) {
       referenceNumber,
       read: false,
       createdAt: new Date().toISOString(),
+    });
+
+    appendAuditLog(db, {
+      actor: customerName,
+      role: 'customer',
+      action: 'BOOKING_CREATED',
+      targetId: referenceNumber,
+      ip: getClientIp(req),
+      details: `Created booking ${referenceNumber} for ${eventDate} (Total: ₱${totalAmount.toLocaleString()}, Consent: ${consentTimestamp})`,
     });
 
     await writeDb(db);
@@ -239,10 +262,9 @@ export async function POST(req: NextRequest) {
         customerSms: `MMC Set n Seat Rentals: Thank you ${customerName}! Your booking ${referenceNumber} for ${eventDate} is received. Required deposit (${db.settings.depositPercent}%): PHP ${depositRequired.toLocaleString()}. Questions? Call/Text ${db.settings.phone}.`,
       },
     });
-  } catch (err: any) {
-    console.error('Error creating booking:', err);
+  } catch {
     return NextResponse.json(
-      { error: err?.message || 'Failed to create booking.' },
+      { error: 'Unable to process booking request. Please try again.' },
       { status: 500 }
     );
   }
@@ -250,25 +272,60 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const rateLimited = enforceRateLimit(req, 'bookings_patch', 30, 5 * 60 * 1000);
+    if (rateLimited) return rateLimited;
+
     const body = await req.json();
     const { bookingId, action } = body;
+    const adminSession = verifyAdminRequest(req);
+
+    // Only allow unauthenticated callers to submit an unverified customer payment proof
+    const isCustomerPaymentUpload =
+      action === 'add_payment' && body.verifiedByAdmin === false;
+
+    if (!adminSession && !isCustomerPaymentUpload) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin authentication required.' },
+        { status: 401 }
+      );
+    }
 
     const db = await readDb();
     const booking = db.bookings.find((b) => b.id === bookingId);
     if (!booking) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Booking not found.' }, { status: 404 });
     }
 
     const nowIso = new Date().toISOString().slice(0, 10);
 
     if (action === 'update_status') {
-      const newStatus = body.status as BookingStatus;
-      booking.status = newStatus;
+      const allowedStatuses: BookingStatus[] = [
+        'Pending',
+        'Confirmed',
+        'Out for Delivery',
+        'In Use',
+        'Returned',
+        'Completed',
+        'Cancelled',
+      ];
+      if (!allowedStatuses.includes(body.status)) {
+        return NextResponse.json({ error: 'Invalid booking status.' }, { status: 400 });
+      }
+      booking.status = body.status as BookingStatus;
       if (body.adminNotes !== undefined) {
-        booking.adminNotes = body.adminNotes;
+        booking.adminNotes = sanitizeText(body.adminNotes, 500);
       }
       booking.updatedAt = nowIso;
     } else if (action === 'update_payment_status') {
+      const allowedPayStatuses: PaymentStatus[] = [
+        'Unpaid',
+        'Deposit Paid',
+        'Fully Paid',
+        'Refunded',
+      ];
+      if (!allowedPayStatuses.includes(body.paymentStatus)) {
+        return NextResponse.json({ error: 'Invalid payment status.' }, { status: 400 });
+      }
       const newPayStatus = body.paymentStatus as PaymentStatus;
       booking.paymentStatus = newPayStatus;
       if (newPayStatus === 'Fully Paid') {
@@ -283,12 +340,13 @@ export async function PATCH(req: NextRequest) {
       }
       booking.updatedAt = nowIso;
     } else if (action === 'reschedule') {
-      const { newEventDate, newReturnDate, newEventTime } = body;
-      if (!newEventDate) {
-        return NextResponse.json({ error: 'New event date is required.' }, { status: 400 });
+      const newEventDate = sanitizeText(body.newEventDate, 10);
+      const newReturnDate = sanitizeText(body.newReturnDate || newEventDate, 10);
+      const newEventTime = sanitizeText(body.newEventTime, 20);
+      if (!isValidIsoDate(newEventDate) || !isValidIsoDate(newReturnDate)) {
+        return NextResponse.json({ error: 'Valid event date is required.' }, { status: 400 });
       }
-      const effReturn = newReturnDate && newReturnDate >= newEventDate ? newReturnDate : newEventDate;
-      // Verify stock availability excluding this booking itself
+      const effReturn = newReturnDate >= newEventDate ? newReturnDate : newEventDate;
       const avail = await getAvailabilityForDateRange(newEventDate, effReturn, booking.id, db);
       for (const line of booking.items) {
         const itemAvail = avail[line.itemId];
@@ -308,7 +366,6 @@ export async function PATCH(req: NextRequest) {
       if (newEventTime) booking.eventTime = newEventTime;
       booking.rentalDays = newDays;
 
-      // Recompute subtotal & total for updated rental days
       let newSubtotal = 0;
       for (const line of booking.items) {
         line.lineTotal = line.pricePerDay * line.quantity * newDays;
@@ -317,25 +374,48 @@ export async function PATCH(req: NextRequest) {
       booking.subtotal = newSubtotal;
       booking.totalAmount = Math.max(
         0,
-        newSubtotal + booking.deliveryFee + booking.setupFee + booking.damageFeeTotal - booking.discountAmount
+        newSubtotal +
+          booking.deliveryFee +
+          booking.setupFee +
+          booking.damageFeeTotal -
+          booking.discountAmount
       );
-      booking.depositRequired = Math.round(booking.totalAmount * (db.settings.depositPercent / 100));
+      booking.depositRequired = Math.round(
+        booking.totalAmount * (db.settings.depositPercent / 100)
+      );
       booking.balanceDue = Math.max(0, booking.totalAmount - booking.amountPaid);
       booking.updatedAt = nowIso;
     } else if (action === 'add_payment') {
       const amount = Number(body.amount) || 0;
-      if (amount <= 0) {
-        return NextResponse.json({ error: 'Payment amount must be greater than 0.' }, { status: 400 });
+      if (amount <= 0 || amount > 1_000_000) {
+        return NextResponse.json(
+          { error: 'Payment amount must be between ₱1 and ₱1,000,000.' },
+          { status: 400 }
+        );
       }
+      if (!isValidSafeImageUrl(body.proofImageUrl)) {
+        return NextResponse.json(
+          { error: 'Invalid payment proof image or file exceeds 1.5 MB.' },
+          { status: 400 }
+        );
+      }
+
+      // Only authenticated admins can mark verifiedByAdmin = true
+      const verifiedByAdmin = adminSession
+        ? body.verifiedByAdmin !== undefined
+          ? Boolean(body.verifiedByAdmin)
+          : true
+        : false;
+
       const payLog = {
         id: `pay-${Date.now()}`,
         bookingId: booking.id,
         amount,
         type: body.type || 'Deposit',
         method: body.method || 'GCash',
-        referenceNo: body.referenceNo || '',
+        referenceNo: sanitizeText(body.referenceNo, 60),
         proofImageUrl: body.proofImageUrl || undefined,
-        verifiedByAdmin: body.verifiedByAdmin !== undefined ? Boolean(body.verifiedByAdmin) : true,
+        verifiedByAdmin,
         createdAt: nowIso,
       };
       booking.payments.push(payLog);
@@ -356,7 +436,9 @@ export async function PATCH(req: NextRequest) {
           id: `notif-${Date.now()}`,
           type: 'PAYMENT_UPLOADED',
           title: `Payment Proof Uploaded: ${booking.referenceNumber}`,
-          message: `${booking.customerName} submitted ₱${amount.toLocaleString()} via ${payLog.method} (Ref: ${payLog.referenceNo || 'N/A'}).`,
+          message: `${booking.customerName} submitted ₱${amount.toLocaleString()} via ${
+            payLog.method
+          } (Ref: ${payLog.referenceNo || 'N/A'}).`,
           referenceNumber: booking.referenceNumber,
           read: false,
           createdAt: new Date().toISOString(),
@@ -381,19 +463,19 @@ export async function PATCH(req: NextRequest) {
       }
       booking.updatedAt = nowIso;
     } else if (action === 'add_damage') {
-      const fee = Number(body.feeCharged) || 0;
-      const qty = Number(body.quantity) || 1;
+      const fee = Math.max(0, Number(body.feeCharged) || 0);
+      const qty = Math.max(1, Math.floor(Number(body.quantity) || 1));
       const dmg = {
         id: `dmg-${Date.now()}`,
         bookingId: booking.id,
         referenceNumber: booking.referenceNumber,
         customerName: booking.customerName,
-        itemName: body.itemName || 'Rental Item',
+        itemName: sanitizeText(body.itemName || 'Rental Item', 100),
         issueType: body.issueType || 'Damaged',
         quantity: qty,
         feeCharged: fee,
         resolved: Boolean(body.resolved),
-        notes: body.notes || '',
+        notes: sanitizeText(body.notes, 300),
         createdAt: nowIso,
       };
       booking.damageLogs.push(dmg);
@@ -428,10 +510,18 @@ export async function PATCH(req: NextRequest) {
       booking.updatedAt = nowIso;
     }
 
+    appendAuditLog(db, {
+      actor: adminSession ? adminSession.sub : booking.customerName,
+      role: adminSession ? 'admin' : 'customer',
+      action: `BOOKING_${String(action).toUpperCase()}`,
+      targetId: booking.referenceNumber,
+      ip: getClientIp(req),
+      details: `Booking ${booking.referenceNumber} updated via action "${action}"`,
+    });
+
     await writeDb(db);
     return NextResponse.json({ success: true, booking, damageLogs: db.damageLogs });
-  } catch (err: any) {
-    console.error('Error updating booking:', err);
-    return NextResponse.json({ error: err?.message || 'Update failed' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Booking update failed.' }, { status: 500 });
   }
 }

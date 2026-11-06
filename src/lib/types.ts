@@ -113,6 +113,9 @@ export interface Booking {
   balanceDue: number;
   notes?: string;
   adminNotes?: string;
+  consentTimestamp?: string;
+  privacyPolicyVersion?: string;
+  termsVersion?: string;
   createdAt: string;
   updatedAt: string;
   items: BookingItemLine[];
@@ -188,14 +191,35 @@ export interface GalleryItem {
   date: string;
 }
 
+export type ReviewModerationStatus = 'approved' | 'pending' | 'rejected';
+
 export interface ReviewItem {
   id: string;
+  bookingReference?: string;
+  verifiedBooking?: boolean;
   customerName: string;
   eventType: EventType;
   location: string;
   rating: number;
   comment: string;
   date: string;
+  status?: ReviewModerationStatus;
+  flags?: string[];
+  moderationReason?: string;
+  ownerResponse?: string;
+  ownerResponseDate?: string;
+  reportCount?: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  role: 'admin' | 'staff' | 'customer' | 'anonymous';
+  action: string;
+  targetId?: string;
+  ip?: string;
+  details: string;
 }
 
 export interface DatabaseSchema {
@@ -207,5 +231,5 @@ export interface DatabaseSchema {
   notifications: NotificationAlert[];
   gallery: GalleryItem[];
   reviews: ReviewItem[];
+  auditLogs?: AuditLogEntry[];
 }
-
