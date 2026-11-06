@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://neiks11.github.io/MMC-SetnSeat/sitemap.xml
