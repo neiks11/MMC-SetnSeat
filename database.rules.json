@@ -48,6 +48,13 @@
     "mmc_system": {
       ".read": "auth != null && auth.token.admin === true",
       ".write": "auth != null && auth.token.admin === true"
+    },
+    "visitor_logs": {
+      ".read": "auth != null && auth.token.admin === true",
+      "$logId": {
+        ".write": "!data.exists() || (auth != null && auth.token.admin === true)",
+        ".validate": "newData.hasChildren(['eventName', 'timestampUtc', 'anonSessionId', 'pagePath', 'deviceType']) && newData.child('eventName').isString() && newData.child('eventName').val().length <= 32 && newData.child('pagePath').isString() && newData.child('pagePath').val().length <= 80"
+      }
     }
   }
 }

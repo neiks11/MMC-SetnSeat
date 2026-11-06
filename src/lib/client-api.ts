@@ -1125,6 +1125,39 @@ export async function apiFetch(input: string, init?: RequestInit): Promise<Respo
     }
   }
 
+  // 8. /api/logs (Privacy-First Visitor Logs for Static Export Mode)
+  if (pathname.endsWith('/api/logs')) {
+    const rawLocal =
+      typeof window !== 'undefined' ? window.localStorage.getItem('mmc_visitor_logs_v1') : null;
+    const allLogs = rawLocal ? JSON.parse(rawLocal) : [];
+
+    if (method === 'GET') {
+      const days = Math.min(90, Math.max(1, Number(searchParams.get('days')) || 30));
+      const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+      const filtered = allLogs.filter(
+        (ev: any) => new Date(ev.timestampUtc).getTime() >= cutoffMs
+      );
+      return makeJsonResponse({
+        logs: filtered,
+        totalStored: allLogs.length,
+        retentionDays: 90,
+      });
+    }
+
+    if (method === 'DELETE') {
+      const sessionId = searchParams.get('anonSessionId');
+      if (typeof window !== 'undefined') {
+        if (sessionId) {
+          const next = allLogs.filter((ev: any) => ev.anonSessionId !== sessionId);
+          window.localStorage.setItem('mmc_visitor_logs_v1', JSON.stringify(next));
+        } else {
+          window.localStorage.removeItem('mmc_visitor_logs_v1');
+        }
+      }
+      return makeJsonResponse({ success: true });
+    }
+  }
+
   return makeJsonResponse({ error: 'Endpoint not found' }, 404);
 }
 

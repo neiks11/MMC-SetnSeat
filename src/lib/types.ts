@@ -232,4 +232,5 @@ export interface DatabaseSchema {
   gallery: GalleryItem[];
   reviews: ReviewItem[];
   auditLogs?: AuditLogEntry[];
+  visitorLogs?: any[];
 }

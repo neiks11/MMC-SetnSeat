@@ -70,8 +70,20 @@ export default function PrivacyPolicyPage() {
               optional screenshot of deposit proof. <em>We do not collect or store credit/debit card numbers or e-wallet PINs/MPINs.</em>
             </li>
             <li>
-              <strong>Technical, Security & Consent Logs:</strong> IP address (used for rate limiting and
-              anti-abuse security logs), timestamp of privacy/terms consent, and cookie preferences.
+              <strong>Technical, Security & Consent Logs:</strong> IP address (hashed with a daily rotating
+              salt and deleted after 30 days for abuse prevention; raw IP addresses are never stored in visitor
+              logs), timestamp of privacy/terms consent, and cookie preferences.
+            </li>
+            <li>
+              <strong>Opt-In Privacy-First Visitor Logs (Only After Cookie Banner Consent):</strong> If you
+              click &ldquo;Accept All&rdquo; or enable Analytics in our Cookie Banner (and your browser does not send a
+              Do Not Track or Global Privacy Control signal), our first-party logger records an in-memory-only
+              anonymous session ID (no cookies), UTC &amp; Asia/Manila timestamp, page path, referrer domain,
+              UTM tags, device type (Mobile/Tablet/Desktop), browser/OS family, screen dimensions, approximate
+              region, and non-PII interaction counts (dates checked, items added to quote, FAQ opened, or
+              runtime script errors). <strong>We never log your name, phone number, address, or form input
+              contents in visitor logs.</strong> Visitor logs are automatically deleted after 90 days and are
+              accessible only to authenticated administrators at <code>/admin/logs</code>.
             </li>
           </ul>
         </section>
