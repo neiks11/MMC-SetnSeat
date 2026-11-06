@@ -48,6 +48,10 @@ import { ItemAvailability, apiFetch, getAssetPath } from '@/lib/client-api';
 import FloatingChatButton from './FloatingChatButton';
 import PrintableDocumentModal from './PrintableDocumentModal';
 import CookieConsentBanner from './CookieConsentBanner';
+import { getInitialSeedData } from '@/lib/seed-data';
+import { logVisitorEvent, initGlobalErrorLogger } from '@/lib/visitor-logger';
+
+const INITIAL_SSR_SEED = getInitialSeedData();
 
 type CustomerTab =
   | 'home'
@@ -183,13 +187,13 @@ export default function CustomerApp() {
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  // Server state
-  const [settings, setSettings] = useState<BusinessSettings | null>(null);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  // TASK 2: Initialize with static seed data so full HTML renders immediately without JS (no "Loading..." blocker or CLS)
+  const [settings, setSettings] = useState<BusinessSettings>(INITIAL_SSR_SEED.settings);
+  const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_SSR_SEED.inventory);
   const [availability, setAvailability] = useState<Record<string, ItemAvailability>>({});
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [reviews, setReviews] = useState<ReviewItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [gallery, setGallery] = useState<GalleryItem[]>(INITIAL_SSR_SEED.gallery);
+  const [reviews, setReviews] = useState<ReviewItem[]>(INITIAL_SSR_SEED.reviews);
+  const [loading, setLoading] = useState(false);
 
   // MOBILE FIX #3: Default start date to Today and auto-set return date to Tomorrow
   const [eventDate, setEventDate] = useState<string>(() => getTodayStr());
@@ -255,8 +259,10 @@ export default function CustomerApp() {
   const [printBooking, setPrintBooking] = useState<Booking | null>(null);
   const [printDocType, setPrintDocType] = useState<'RECEIPT' | 'INVOICE' | 'DELIVERY_SLIP'>('INVOICE');
 
-  // Initial load
+  // Initial load & privacy-first visitor log
   useEffect(() => {
+    initGlobalErrorLogger();
+    logVisitorEvent('page_view', { key: 'tab', value: 'home' });
     fetchState(eventDate, returnDate);
   }, []);
 
@@ -295,16 +301,16 @@ export default function CustomerApp() {
       setLoading(true);
       const res = await apiFetch(`/api/state?startDate=${start}&endDate=${end}`);
       const data = await res.json();
-      setSettings(data.settings);
-      setInventory(data.inventory || []);
-      setAvailability(data.availability || {});
-      setGallery(data.gallery || []);
-      setReviews(data.reviews || []);
+      if (data.settings) setSettings(data.settings);
+      if (Array.isArray(data.inventory) && data.inventory.length > 0) setInventory(data.inventory);
+      if (data.availability) setAvailability(data.availability);
+      if (Array.isArray(data.gallery) && data.gallery.length > 0) setGallery(data.gallery);
+      if (Array.isArray(data.reviews) && data.reviews.length > 0) setReviews(data.reviews);
       if (data.settings?.deliveryZones?.length > 0) {
         setMunicipality(data.settings.deliveryZones[0].municipality);
       }
-    } catch (e) {
-      console.error('Failed to load state:', e);
+    } catch {
+      // Keep prerendered static seed state if offline
     } finally {
       setLoading(false);
     }
@@ -329,12 +335,14 @@ export default function CustomerApp() {
   // Validated date change handlers: ensures returnDate >= eventDate, and auto-advances returnDate to next day when start date moves ahead
   function handleStartDateChange(newStart: string) {
     setEventDate(newStart);
+    logVisitorEvent('date_checked', { key: 'startDate', value: newStart });
     if (!returnDate || returnDate <= newStart) {
       setReturnDate(getNextDayStr(newStart));
     }
   }
 
   function handleReturnDateChange(newReturn: string) {
+    logVisitorEvent('date_checked', { key: 'returnDate', value: newReturn });
     if (newReturn < eventDate) {
       setReturnDate(eventDate);
     } else {
@@ -354,6 +362,11 @@ export default function CustomerApp() {
   // Cart manipulation with live stock cap
   function updateCartQty(itemId: string, deltaOrExact: number, isExact = false) {
     const avail = availability[itemId]?.remainingStock ?? 999;
+    if (!isExact && deltaOrExact > 0) {
+      logVisitorEvent('item_added', { key: 'itemId', value: itemId });
+    } else if (!isExact && deltaOrExact < 0) {
+      logVisitorEvent('item_removed', { key: 'itemId', value: itemId });
+    }
     setCart((prev) => {
       const current = prev[itemId] || 0;
       const next = isExact ? deltaOrExact : current + deltaOrExact;
@@ -525,6 +538,7 @@ export default function CustomerApp() {
 
       setConfirmedBooking(data.booking);
       setSmsPreview(data.notificationSimulated?.customerSms || null);
+      logVisitorEvent('booking_submitted', { key: 'eventDate', value: eventDate });
       setCart({});
       fetchAvailabilityOnly(eventDate, returnDate);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -540,6 +554,7 @@ export default function CustomerApp() {
     if (e) e.preventDefault();
     const refToFind = (customRef || trackRefInput).trim();
     if (!refToFind) return;
+    logVisitorEvent('track_booking_lookup', { key: 'lookup', value: 'reference_search' });
     setTrackError(null);
     try {
       const res = await apiFetch(`/api/state?ref=${encodeURIComponent(refToFind)}`);
@@ -654,24 +669,7 @@ export default function CustomerApp() {
     }
   }
 
-  if (loading || !settings) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF8F5] px-4">
-        <div className="text-center space-y-3">
-          <img
-            src={getAssetPath('/logo.jpg')}
-            alt="MMC Set n Seat Rentals Logo"
-            width={80}
-            height={80}
-            className="w-20 h-20 rounded-full object-cover mx-auto shadow-lg border-2 border-[#7B2D26]"
-          />
-          <p className="text-base font-bold text-[#7B2D26]">
-            Loading MMC Set n Seat Rentals...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // TASK 2: No blocking "Loading..." screen — full HTML renders immediately for crawlers, no-JS users, and slow 3G phones.
 
   const packagesList = inventory.filter((i) => i.active && i.category === 'Packages');
   const filteredCatalog = inventory.filter((item) => {
