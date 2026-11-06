@@ -649,17 +649,6 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900">
-              <div className="font-bold">Default Owner Login (Pre-filled):</div>
-              <div>
-                Username: <code className="font-bold">admin</code> • Password:{' '}
-                <code className="font-bold">password123</code>
-              </div>
-              <div className="text-[11px] text-emerald-700 mt-0.5">
-                (You can change your password anytime in the Settings tab)
-              </div>
-            </div>
-
             <button
               type="submit"
               className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-black py-3.5 rounded-xl text-sm shadow-lg transition"
@@ -786,6 +775,16 @@ export default function AdminDashboard() {
                 </button>
               );
             })}
+            <Link
+              href="/admin/logs"
+              className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/30"
+            >
+              <div className="flex items-center gap-2.5">
+                <BarChart3 className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>Visitor Logs &amp; Funnel</span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+            </Link>
           </nav>
         </div>
 
